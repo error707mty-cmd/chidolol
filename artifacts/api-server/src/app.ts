@@ -50,7 +50,7 @@ app.use("/api", router);
 // ── Serve compiled frontend (SPA) ────────────────────────────────────────────
 const frontendDist = path.resolve(__dirname, "../../dtf-pliego/dist");
 app.use(express.static(frontendDist));
-app.get("*", (_req, res) => {
+app.get("/*", (_req, res) => {
   res.sendFile(path.join(frontendDist, "index.html"));
 });
 
