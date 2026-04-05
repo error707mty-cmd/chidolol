@@ -849,7 +849,7 @@ router.post("/admin/chat", requireAdmin, async (req, res) => {
       console.log(`Enviando ${TOOLS.length} herramientas a OpenAI`);
       const response = await openai.chat.completions.create({
         model: "gpt-4-turbo",
-        max_tokens: 8192,
+        max_tokens: 4096,
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...apiMessages],
         tools: TOOLS.map(tool => ({
           type: "function" as const,
@@ -1095,7 +1095,7 @@ async function runJobInBackground(job: Job, brain: string, semanticContext: stri
         response = await openai.chat.completions.create(
           {
             model: "gpt-4-turbo",
-            max_tokens: 8192,
+            max_tokens: 4096,
             messages: [{ role: "system", content: SYSTEM_PROMPT }, ...apiMessages],
             tools: TOOLS.map(tool => ({
               type: "function" as const,
