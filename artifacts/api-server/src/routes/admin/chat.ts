@@ -2,7 +2,8 @@ import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { db, pool as rawPool, usersTable, pliegosTable, uploadsTable } from "@workspace/db";
 import { eq, count, desc, sql } from "drizzle-orm";
-import { anthropic } from "@workspace/integrations-anthropic-ai";
+import OpenAI from "openai";
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 import Groq from "groq-sdk";
 
 const groqClient = new Groq({ apiKey: process.env["GROQ_API_KEY"] ?? "" });
@@ -426,7 +427,7 @@ async function toolAppendKnowledge(note: string): Promise<unknown> {
 // TOOL DEFINITIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const TOOLS: import("@anthropic-ai/sdk/resources").Tool[] = [
+const TOOLS: { name: string; description: string; input_schema: Record<string, unknown> }[] = [
   // ── Usuarios / App ──
   {
     name: "list_users",
@@ -833,7 +834,7 @@ router.post("/admin/chat", requireAdmin, async (req, res) => {
 
     const SYSTEM_PROMPT = buildSystemPrompt(brain + semanticContext);
 
-    let apiMessages: import("@anthropic-ai/sdk/resources").MessageParam[] = messages.map((m) => ({
+    let apiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = messages.map((m) => ({
       role: m.role,
       content: m.content as any, // puede ser string o array de bloques (texto + imagen)
     }));
@@ -845,30 +846,36 @@ router.post("/admin/chat", requireAdmin, async (req, res) => {
       iterations++;
       if (iterations > 1) send({ thinking: true });
 
-      console.log(`Enviando ${TOOLS.length} herramientas a Claude`);
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-6",
+      console.log(`Enviando ${TOOLS.length} herramientas a OpenAI`);
+      const response = await openai.chat.completions.create({
+        model: "gpt-4-turbo",
         max_tokens: 8192,
-        system: SYSTEM_PROMPT,
-        tools: TOOLS,
-        tool_choice: { type: "auto" },
-        messages: apiMessages,
+        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...apiMessages],
+        tools: TOOLS.map(tool => ({
+          type: "function" as const,
+          function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.input_schema,
+          },
+        })),
+        tool_choice: "auto",
       });
 
-      let textContent = "";
-      const toolUses: { id: string; name: string; input: unknown }[] = [];
-
-      for (const block of response.content) {
-        if (block.type === "text") textContent += block.text;
-        else if (block.type === "tool_use") toolUses.push({ id: block.id, name: block.name, input: block.input });
-      }
+      const message = response.choices[0].message;
+      const textContent = message.content ?? "";
+      const toolUses: { id: string; name: string; input: unknown }[] = (message.tool_calls ?? []).map(tc => ({
+        id: tc.id,
+        name: tc.function.name,
+        input: JSON.parse(tc.function.arguments || "{}"),
+      }));
 
       if (textContent) send({ content: textContent });
-      if (response.stop_reason === "end_turn" || toolUses.length === 0) break;
+      if (response.choices[0].finish_reason === "stop" || toolUses.length === 0) break;
 
       send({ tool_calls: toolUses.map((t) => ({ name: t.name, input: t.input })) });
 
-      const toolResults: import("@anthropic-ai/sdk/resources").ToolResultBlockParam[] = [];
+      const toolResults: OpenAI.Chat.ChatCompletionToolMessageParam[] = [];
 
       for (const tool of toolUses) {
         let result: unknown;
@@ -901,18 +908,19 @@ router.post("/admin/chat", requireAdmin, async (req, res) => {
           result = { error: String(e) };
         }
         toolResults.push({
-          type: "tool_result",
-          tool_use_id: tool.id,
+          role: "tool",
+          tool_call_id: tool.id,
           content: JSON.stringify(result),
         });
       }
 
       apiMessages = [
         ...apiMessages,
-        { role: "assistant", content: response.content },
-        { role: "user", content: toolResults },
+        { role: "assistant", content: message.content, tool_calls: message.tool_calls },
+        ...toolResults,
       ];
     }
+
 
     // Guardar la conversación en memoria semántica (async, no bloquea respuesta)
     try {
@@ -1044,7 +1052,7 @@ setInterval(() => {
   }
 }, 60 * 1000);
 
-const ANTHROPIC_CALL_TIMEOUT_MS = 300_000; // 300 seconds (5 min) per API call
+const OPENAI_CALL_TIMEOUT_MS = 300_000; // 300 seconds (5 min) per API call
 
 async function runJobInBackground(job: Job, brain: string, semanticContext: string) {
   job.status = "running";
@@ -1055,7 +1063,7 @@ async function runJobInBackground(job: Job, brain: string, semanticContext: stri
   job.abortController = jobAbort;
 
   const SYSTEM_PROMPT = buildSystemPrompt(brain + semanticContext);
-  let apiMessages: import("@anthropic-ai/sdk/resources").MessageParam[] = job.messages.map((m) => ({
+  let apiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = job.messages.map((m) => ({
     role: m.role,
     content: m.content as any,
   }));
@@ -1077,41 +1085,47 @@ async function runJobInBackground(job: Job, brain: string, semanticContext: stri
         return;
       }
 
-      // Per-call timeout: abort if Anthropic hangs more than 90s
+      // Per-call timeout: abort if OpenAI hangs more than 5 min
       const callAbort = new AbortController();
-      const callTimer = setTimeout(() => callAbort.abort(), ANTHROPIC_CALL_TIMEOUT_MS);
+      const callTimer = setTimeout(() => callAbort.abort(), OPENAI_CALL_TIMEOUT_MS);
 
-      let response: Awaited<ReturnType<typeof anthropic.messages.create>>;
+      let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
       try {
-        console.log(`Enviando ${TOOLS.length} herramientas a Claude`);
-        response = await anthropic.messages.create(
+        console.log(`Enviando ${TOOLS.length} herramientas a OpenAI`);
+        response = await openai.chat.completions.create(
           {
-            model: "claude-sonnet-4-6",
+            model: "gpt-4-turbo",
             max_tokens: 8192,
-            system: SYSTEM_PROMPT,
-            tools: TOOLS,
-            tool_choice: { type: "auto" },
-            messages: apiMessages,
+            messages: [{ role: "system", content: SYSTEM_PROMPT }, ...apiMessages],
+            tools: TOOLS.map(tool => ({
+              type: "function" as const,
+              function: {
+                name: tool.name,
+                description: tool.description,
+                parameters: tool.input_schema,
+              },
+            })),
+            tool_choice: "auto",
           },
           { signal: callAbort.signal as any }
         );
       } catch (callErr: any) {
         clearTimeout(callTimer);
         if (callAbort.signal.aborted || callErr?.name === "AbortError") {
-          throw new Error(`Timeout: Anthropic no respondió en ${ANTHROPIC_CALL_TIMEOUT_MS / 1000 / 60} minutos. Intenta con una tarea más corta.`);
+          throw new Error(`Timeout: OpenAI no respondió en ${OPENAI_CALL_TIMEOUT_MS / 1000 / 60} minutos. Intenta con una tarea más corta.`);
         }
         throw callErr;
       } finally {
         clearTimeout(callTimer);
       }
 
-      let textContent = "";
-      const toolUses: { id: string; name: string; input: unknown }[] = [];
-
-      for (const block of response.content) {
-        if (block.type === "text") textContent += block.text;
-        else if (block.type === "tool_use") toolUses.push({ id: block.id, name: block.name, input: block.input });
-      }
+      const jobMessage = response.choices[0].message;
+      const textContent = jobMessage.content ?? "";
+      const toolUses: { id: string; name: string; input: unknown }[] = (jobMessage.tool_calls ?? []).map(tc => ({
+        id: tc.id,
+        name: tc.function.name,
+        input: JSON.parse(tc.function.arguments || "{}"),
+      }));
 
       if (textContent) fullContent += textContent;
       toolUses.forEach(t => toolCallsAccum.push({ name: t.name, input: t.input }));
@@ -1121,9 +1135,9 @@ async function runJobInBackground(job: Job, brain: string, semanticContext: stri
       job.toolCalls = toolCallsAccum;
       job.updatedAt = new Date();
 
-      if (response.stop_reason === "end_turn" || toolUses.length === 0) break;
+      if (response.choices[0].finish_reason === "stop" || toolUses.length === 0) break;
 
-      const toolResults: import("@anthropic-ai/sdk/resources").ToolResultBlockParam[] = [];
+      const toolResults: OpenAI.Chat.ChatCompletionToolMessageParam[] = [];
       for (const tool of toolUses) {
         let result: unknown;
         try {
@@ -1154,13 +1168,13 @@ async function runJobInBackground(job: Job, brain: string, semanticContext: stri
         } catch (e) {
           result = { error: String(e) };
         }
-        toolResults.push({ type: "tool_result", tool_use_id: tool.id, content: JSON.stringify(result) });
+        toolResults.push({ role: "tool", tool_call_id: tool.id, content: JSON.stringify(result) });
       }
 
       apiMessages = [
         ...apiMessages,
-        { role: "assistant", content: response.content },
-        { role: "user", content: toolResults },
+        { role: "assistant", content: jobMessage.content, tool_calls: jobMessage.tool_calls },
+        ...toolResults,
       ];
     }
 
