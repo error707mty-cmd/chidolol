@@ -305,6 +305,54 @@ async function toolRestartBackend(): Promise<unknown> {
   }
 }
 
+// ── Ejecución de código sin restricciones ────────────────────────────────────
+
+async function toolEvalCode(code: string): Promise<unknown> {
+  try {
+    const result = await eval(`(async () => { ${code} })()`);
+    return {
+      success: true,
+      result: String(result).slice(0, 5000),
+      type: typeof result,
+    };
+  } catch (e: any) {
+    return {
+      error: e.message,
+      stack: e.stack?.slice(0, 2000),
+    };
+  }
+}
+
+async function toolExecNodeScript(scriptPath: string, args?: string[]): Promise<unknown> {
+  try {
+    const fullPath = resolveSafePath(scriptPath);
+    if (!fullPath) return { error: "Ruta no válida" };
+
+    const argsStr = args?.map(a => `"${a.replace(/"/g, '\\"')}"`).join(' ') || '';
+    const { stdout, stderr } = await execAsync(
+      `node "${fullPath}" ${argsStr}`,
+      {
+        cwd: WORKSPACE_ROOT,
+        timeout: 120_000,
+        env: { ...process.env, NODE_ENV: "development" },
+      }
+    );
+
+    return {
+      success: true,
+      stdout: stdout.slice(0, 10_000),
+      stderr: stderr.slice(0, 5_000),
+    };
+  } catch (e: any) {
+    return {
+      error: e.message?.slice(0, 2000),
+      stdout: e.stdout?.slice(0, 5_000),
+      stderr: e.stderr?.slice(0, 5_000),
+      exitCode: e.code,
+    };
+  }
+}
+
 // ── Conocimiento propio (auto-aprendizaje) ─────────────────────────────────────
 
 async function toolReadKnowledge(): Promise<unknown> {
@@ -579,6 +627,30 @@ Ejemplos útiles:
       required: ["note"],
     },
   },
+  // ── Ejecución de código ──
+  {
+    name: "eval_code",
+    description: "Ejecuta código JavaScript arbitrario sin restricciones. Acceso total al sistema, BD, filesystem, APIs.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        code: { type: "string", description: "Código JavaScript a ejecutar (puede ser async/await)" },
+      },
+      required: ["code"],
+    },
+  },
+  {
+    name: "exec_node_script",
+    description: "Ejecuta un archivo .js o .ts como script Node.js con argumentos opcionales. Acceso total sin restricciones.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        scriptPath: { type: "string", description: "Ruta del script relativa al workspace" },
+        args: { type: "array", items: { type: "string" }, description: "Argumentos a pasar al script" },
+      },
+      required: ["scriptPath"],
+    },
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -819,6 +891,8 @@ router.post("/admin/chat", requireAdmin, async (req, res) => {
             case "read_knowledge":       result = await toolReadKnowledge(); break;
             case "update_knowledge":     result = await toolUpdateKnowledge(inp.section, inp.content); break;
             case "append_knowledge":     result = await toolAppendKnowledge(inp.note); break;
+            case "eval_code":            result = await toolEvalCode(inp.code); break;
+            case "exec_node_script":     result = await toolExecNodeScript(inp.scriptPath, inp.args); break;
             default:                     result = { error: `Herramienta desconocida: ${tool.name}` };
           }
         } catch (e) {
@@ -1069,6 +1143,8 @@ async function runJobInBackground(job: Job, brain: string, semanticContext: stri
             case "read_knowledge":       result = await toolReadKnowledge(); break;
             case "update_knowledge":     result = await toolUpdateKnowledge(inp.section, inp.content); break;
             case "append_knowledge":     result = await toolAppendKnowledge(inp.note); break;
+            case "eval_code":            result = await toolEvalCode(inp.code); break;
+            case "exec_node_script":     result = await toolExecNodeScript(inp.scriptPath, inp.args); break;
             default:                     result = { error: `Herramienta desconocida: ${tool.name}` };
           }
         } catch (e) {
