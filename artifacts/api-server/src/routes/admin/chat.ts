@@ -19,7 +19,7 @@ const JWT_SECRET = process.env["JWT_SECRET"];
 if (!JWT_SECRET) throw new Error("JWT_SECRET env var is required");
 
 const AI_SERVER_URL = process.env.AI_SERVER_URL ?? "http://127.0.0.1:8765";
-const WORKSPACE_ROOT = path.resolve("/home/runner/workspace");
+const WORKSPACE_ROOT = path.resolve("/app");
 const BRAIN_FILE = path.join(WORKSPACE_ROOT, "artifacts/api-server/error-brain.md");
 
 // ── Path helpers ───────────────────────────────────────────────────────────────
