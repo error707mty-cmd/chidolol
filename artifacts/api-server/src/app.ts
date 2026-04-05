@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import path from "path";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { seedAdminUser } from "./lib/seed";
@@ -45,6 +46,13 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+// ── Serve compiled frontend (SPA) ────────────────────────────────────────────
+const frontendDist = path.resolve(__dirname, "../../dtf-pliego/dist");
+app.use(express.static(frontendDist));
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(frontendDist, "index.html"));
+});
 
 // ── Initialize Stripe on startup ─────────────────────────────────────────────
 async function initStripe() {
