@@ -845,11 +845,13 @@ router.post("/admin/chat", requireAdmin, async (req, res) => {
       iterations++;
       if (iterations > 1) send({ thinking: true });
 
+      console.log(`Enviando ${TOOLS.length} herramientas a Claude`);
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 8192,
         system: SYSTEM_PROMPT,
         tools: TOOLS,
+        tool_choice: { type: "auto" },
         messages: apiMessages,
       });
 
@@ -1081,12 +1083,14 @@ async function runJobInBackground(job: Job, brain: string, semanticContext: stri
 
       let response: Awaited<ReturnType<typeof anthropic.messages.create>>;
       try {
+        console.log(`Enviando ${TOOLS.length} herramientas a Claude`);
         response = await anthropic.messages.create(
           {
             model: "claude-sonnet-4-6",
             max_tokens: 8192,
             system: SYSTEM_PROMPT,
             tools: TOOLS,
+            tool_choice: { type: "auto" },
             messages: apiMessages,
           },
           { signal: callAbort.signal as any }
