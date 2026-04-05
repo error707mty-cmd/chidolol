@@ -15,6 +15,7 @@ import AdminAI from "@/pages/AdminAI";
 import AdminAsistente from "@/pages/AdminAsistente";
 import Profile from "@/pages/Profile";
 import Billing from "@/pages/Billing";
+import ChatAI from "@/pages/ChatAI";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 
 function makeQueryClient() {
@@ -56,31 +57,35 @@ function SessionQueryClientProvider({ children }: { children: React.ReactNode })
 function Router() {
   const { user, isLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100dvh", background: "#04020C" }}>
-        <span className="login-spinner" style={{ width: 32, height: 32, borderWidth: 3 }} />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Login />;
-  }
-
+  // Public routes — accessible without authentication
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/pliegos" component={PliegosList} />
-      <Route path="/export/:id" component={Export} />
-      <Route path="/perfil" component={Profile} />
-      <Route path="/pro" component={Billing} />
-      {user.isAdmin && <Route path="/admin" component={AdminPanel} />}
-      {user.isAdmin && <Route path="/admin/usuarios" component={AdminUsers} />}
-      {user.isAdmin && <Route path="/admin/membresias" component={AdminMemberships} />}
-      {user.isAdmin && <Route path="/admin/ia" component={AdminAI} />}
-      {user.isAdmin && <Route path="/admin/asistente" component={AdminAsistente} />}
-      <Route component={NotFound} />
+      <Route path="/chat-ia" component={ChatAI} />
+
+      {/* Auth-required routes */}
+      <Route>
+        {isLoading ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100dvh", background: "#04020C" }}>
+            <span className="login-spinner" style={{ width: 32, height: 32, borderWidth: 3 }} />
+          </div>
+        ) : !user ? (
+          <Login />
+        ) : (
+          <Switch>
+            <Route path="/" component={Home} />
+            <Route path="/pliegos" component={PliegosList} />
+            <Route path="/export/:id" component={Export} />
+            <Route path="/perfil" component={Profile} />
+            <Route path="/pro" component={Billing} />
+            {user.isAdmin && <Route path="/admin" component={AdminPanel} />}
+            {user.isAdmin && <Route path="/admin/usuarios" component={AdminUsers} />}
+            {user.isAdmin && <Route path="/admin/membresias" component={AdminMemberships} />}
+            {user.isAdmin && <Route path="/admin/ia" component={AdminAI} />}
+            {user.isAdmin && <Route path="/admin/asistente" component={AdminAsistente} />}
+            <Route component={NotFound} />
+          </Switch>
+        )}
+      </Route>
     </Switch>
   );
 }
