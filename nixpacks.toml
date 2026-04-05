@@ -1,0 +1,13 @@
+[phases.setup]
+nixPkgs = ['nodejs_20', 'nodePackages.pnpm']
+[phases.install]
+cmds = ['pnpm install --no-frozen-lockfile']
+
+[phases.build]
+cmds = [
+  'pnpm --filter @workspace/api-server run build',
+  'pnpm --filter @workspace/dtf-pliego run build'
+]
+
+[start]
+cmd = 'node artifacts/api-server/dist/index.js'

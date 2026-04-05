@@ -1,0 +1,12 @@
+@"
+FROM node:20
+WORKDIR /app
+ENV NODE_ENV=production
+COPY . .
+RUN npm install -g pnpm
+RUN pnpm install --no-frozen-lockfile
+RUN pnpm --filter @workspace/api-server run build
+RUN pnpm --filter @workspace/dtf-pliego run build
+EXPOSE 3000
+CMD ["node", "artifacts/api-server/dist/index.js"]
+"@ | Out-File -FilePath "C:\ERROR707-STUDIO\Dockerfile" -Encoding utf8

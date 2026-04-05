@@ -1,0 +1,688 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: DTF Pliego Maquetador API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: uploads
+    description: File upload and image management
+  - name: pliegos
+    description: Pliego session management
+  - name: export
+    description: Export pliego to PDF or PNG
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /pliegos:
+    get:
+      operationId: listPliegos
+      tags: [pliegos]
+      summary: List all pliego sessions
+      responses:
+        "200":
+          description: List of pliego sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pliego"
+    post:
+      operationId: createPliego
+      tags: [pliegos]
+      summary: Create a new pliego session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePliegoBody"
+      responses:
+        "201":
+          description: Created pliego
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pliego"
+
+  /pliegos/{id}:
+    get:
+      operationId: getPliego
+      tags: [pliegos]
+      summary: Get a pliego session by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pliego session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pliego"
+        "404":
+          description: Not found
+    patch:
+      operationId: updatePliego
+      tags: [pliegos]
+      summary: Update a pliego session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePliegoBody"
+      responses:
+        "200":
+          description: Updated pliego
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pliego"
+        "404":
+          description: Not found
+    delete:
+      operationId: deletePliego
+      tags: [pliegos]
+      summary: Delete a pliego session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /pliegos/{id}/images:
+    get:
+      operationId: listPliegoImages
+      tags: [pliegos]
+      summary: List images in a pliego
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of images in the pliego
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PliegoImage"
+    post:
+      operationId: addImageToPliego
+      tags: [pliegos]
+      summary: Add an uploaded image to a pliego with placement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddImageToPliegoBody"
+      responses:
+        "201":
+          description: Image added to pliego
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PliegoImage"
+
+  /pliegos/{id}/images/{imageId}:
+    patch:
+      operationId: updatePliegoImage
+      tags: [pliegos]
+      summary: Update image position/size/rotation in pliego
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePliegoImageBody"
+      responses:
+        "200":
+          description: Updated pliego image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PliegoImage"
+    delete:
+      operationId: removePliegoImage
+      tags: [pliegos]
+      summary: Remove an image from a pliego
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed
+
+  /pliegos/{id}/auto-nest:
+    post:
+      operationId: autoNestPliego
+      tags: [pliegos]
+      summary: Auto-arrange all images in the pliego to maximize space usage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated pliego with optimally arranged images
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutoNestResult"
+
+  /pliegos/{id}/price:
+    get:
+      operationId: getPliegoPrice
+      tags: [pliegos]
+      summary: Calculate cost for this pliego
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Price details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceResult"
+
+  /pliegos/{id}/export:
+    post:
+      operationId: exportPliego
+      tags: [export]
+      summary: Export pliego as PDF or PNG
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExportPliegoBody"
+      responses:
+        "200":
+          description: Export job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportResult"
+
+  /uploads:
+    post:
+      operationId: uploadImage
+      tags: [uploads]
+      summary: Upload an image file (PNG, JPG, SVG)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                trimTransparency:
+                  type: boolean
+                  description: Auto-trim transparent borders
+                removeSemiTransparency:
+                  type: boolean
+                  description: Remove semi-transparent pixels (make them fully transparent or opaque)
+              required:
+                - file
+      responses:
+        "201":
+          description: Uploaded image info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadedImage"
+        "400":
+          description: Invalid file
+
+  /uploads/{uploadId}/duplicate:
+    post:
+      operationId: duplicateUpload
+      tags: [uploads]
+      summary: Duplicate an uploaded image
+      parameters:
+        - name: uploadId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DuplicateImageBody"
+      responses:
+        "201":
+          description: New duplicated images
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UploadedImage"
+
+  /uploads/recent:
+    get:
+      operationId: getRecentUploads
+      tags: [uploads]
+      summary: Get recently uploaded images
+      responses:
+        "200":
+          description: Recent uploads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UploadedImage"
+
+  /pliegos/{id}/stats:
+    get:
+      operationId: getPliegoStats
+      tags: [pliegos]
+      summary: Get coverage stats for the pliego (area used, wasted, count)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pliego coverage stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PliegoStats"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    Pliego:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        widthCm:
+          type: number
+          description: Width in centimeters (default 58)
+        heightCm:
+          type: number
+          description: Height in centimeters (default 100)
+        dpi:
+          type: integer
+          description: Print DPI (default 300)
+        pricePerMeter:
+          type: number
+          description: Price per linear meter in local currency
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - widthCm
+        - heightCm
+        - dpi
+        - pricePerMeter
+        - createdAt
+        - updatedAt
+
+    CreatePliegoBody:
+      type: object
+      properties:
+        name:
+          type: string
+        widthCm:
+          type: number
+        heightCm:
+          type: number
+        dpi:
+          type: integer
+        pricePerMeter:
+          type: number
+      required:
+        - name
+
+    UpdatePliegoBody:
+      type: object
+      properties:
+        name:
+          type: string
+        widthCm:
+          type: number
+        heightCm:
+          type: number
+        dpi:
+          type: integer
+        pricePerMeter:
+          type: number
+
+    PliegoImage:
+      type: object
+      properties:
+        id:
+          type: integer
+        pliegoId:
+          type: integer
+        uploadId:
+          type: integer
+        xCm:
+          type: number
+          description: X position in cm from top-left
+        yCm:
+          type: number
+          description: Y position in cm from top-left
+        widthCm:
+          type: number
+        heightCm:
+          type: number
+        rotation:
+          type: number
+          description: Rotation in degrees
+        zIndex:
+          type: integer
+        quantity:
+          type: integer
+          description: Number of copies of this image
+        imageUrl:
+          type: string
+        originalWidthPx:
+          type: integer
+        originalHeightPx:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - pliegoId
+        - uploadId
+        - xCm
+        - yCm
+        - widthCm
+        - heightCm
+        - rotation
+        - zIndex
+        - quantity
+        - imageUrl
+        - originalWidthPx
+        - originalHeightPx
+        - createdAt
+
+    AddImageToPliegoBody:
+      type: object
+      properties:
+        uploadId:
+          type: integer
+        xCm:
+          type: number
+        yCm:
+          type: number
+        widthCm:
+          type: number
+        heightCm:
+          type: number
+        rotation:
+          type: number
+        zIndex:
+          type: integer
+        quantity:
+          type: integer
+      required:
+        - uploadId
+
+    UpdatePliegoImageBody:
+      type: object
+      properties:
+        xCm:
+          type: number
+        yCm:
+          type: number
+        widthCm:
+          type: number
+        heightCm:
+          type: number
+        rotation:
+          type: number
+        zIndex:
+          type: integer
+        uploadId:
+          type: integer
+        quantity:
+          type: integer
+
+    UploadedImage:
+      type: object
+      properties:
+        id:
+          type: integer
+        filename:
+          type: string
+        originalName:
+          type: string
+        mimeType:
+          type: string
+        widthPx:
+          type: integer
+        heightPx:
+          type: integer
+        fileSizeBytes:
+          type: integer
+        imageUrl:
+          type: string
+        trimmedImageUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - filename
+        - originalName
+        - mimeType
+        - widthPx
+        - heightPx
+        - fileSizeBytes
+        - imageUrl
+        - trimmedImageUrl
+        - createdAt
+
+    DuplicateImageBody:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of copies to create (1-50)
+      required:
+        - count
+
+    AutoNestResult:
+      type: object
+      properties:
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/PliegoImage"
+        coveragePercent:
+          type: number
+          description: Percentage of pliego area used
+        placedCount:
+          type: integer
+        unplacedCount:
+          type: integer
+      required:
+        - images
+        - coveragePercent
+        - placedCount
+        - unplacedCount
+
+    PriceResult:
+      type: object
+      properties:
+        pliegoId:
+          type: integer
+        widthCm:
+          type: number
+        heightCm:
+          type: number
+        metersUsed:
+          type: number
+        pricePerMeter:
+          type: number
+        totalPrice:
+          type: number
+        currency:
+          type: string
+      required:
+        - pliegoId
+        - widthCm
+        - heightCm
+        - metersUsed
+        - pricePerMeter
+        - totalPrice
+        - currency
+
+    ExportPliegoBody:
+      type: object
+      properties:
+        format:
+          type: string
+          enum: [pdf, png]
+        dpi:
+          type: integer
+          description: Export DPI (default 300)
+      required:
+        - format
+
+    ExportResult:
+      type: object
+      properties:
+        pliegoId:
+          type: integer
+        format:
+          type: string
+        downloadUrl:
+          type: string
+        filename:
+          type: string
+        fileSizeBytes:
+          type: integer
+      required:
+        - pliegoId
+        - format
+        - downloadUrl
+        - filename
+        - fileSizeBytes
+
+    PliegoStats:
+      type: object
+      properties:
+        pliegoId:
+          type: integer
+        totalAreaCm2:
+          type: number
+        usedAreaCm2:
+          type: number
+        wastedAreaCm2:
+          type: number
+        coveragePercent:
+          type: number
+        imageCount:
+          type: integer
+      required:
+        - pliegoId
+        - totalAreaCm2
+        - usedAreaCm2
+        - wastedAreaCm2
+        - coveragePercent
+        - imageCount
