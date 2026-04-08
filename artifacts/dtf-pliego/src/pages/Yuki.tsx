@@ -850,7 +850,6 @@ export default function Yuki() {
                   }}></span>
                 )}
               </button>
-              </button>
               <button className={`yk-tab ${activePanel === "terminal" ? "yk-tab-active" : ""}`} onClick={() => setActivePanel("terminal")}>
                 <Terminal size={14} /><span>Terminal</span>
               </button>
