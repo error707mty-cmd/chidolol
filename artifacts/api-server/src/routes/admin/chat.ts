@@ -3,7 +3,14 @@ import jwt from "jsonwebtoken";
 import { db, pool as rawPool, usersTable, pliegosTable, uploadsTable } from "@workspace/db";
 import { eq, count, desc, sql } from "drizzle-orm";
 import OpenAI from "openai";
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// DeepSeek API Configuration
+const DEEPSEEK_API_KEY = process.env["DEEPSEEK_API_KEY"] ?? "";
+const deepseek = new OpenAI({
+  apiKey: DEEPSEEK_API_KEY,
+  baseURL: "https://api.deepseek.com",
+});
+
 import Groq from "groq-sdk";
 
 const groqClient = new Groq({ apiKey: process.env["GROQ_API_KEY"] ?? "" });
@@ -21,7 +28,7 @@ if (!JWT_SECRET) throw new Error("JWT_SECRET env var is required");
 
 const AI_SERVER_URL = process.env.AI_SERVER_URL ?? "http://127.0.0.1:8765";
 const WORKSPACE_ROOT = path.resolve("/app");
-const BRAIN_FILE = path.join(WORKSPACE_ROOT, "artifacts/api-server/error-brain.md");
+const BRAIN_FILE = path.join(WORKSPACE_ROOT, "artifacts/api-server/yuki-brain.md");
 
 // ── Path helpers ───────────────────────────────────────────────────────────────
 
@@ -359,9 +366,9 @@ async function toolExecNodeScript(scriptPath: string, args?: string[]): Promise<
 async function toolReadKnowledge(): Promise<unknown> {
   try {
     const content = await fs.readFile(BRAIN_FILE, "utf-8");
-    return { content, path: "artifacts/api-server/error-brain.md", bytes: content.length };
+    return { content, path: "artifacts/api-server/yuki-brain.md", bytes: content.length };
   } catch (e: any) {
-    return { error: `No se pudo leer el brain: ${e.message}` };
+    return { content: "(Sin memoria previa — primera sesión de Yuki)", path: BRAIN_FILE };
   }
 }
 
@@ -602,12 +609,12 @@ Ejemplos útiles:
   // ── Auto-aprendizaje ──
   {
     name: "read_knowledge",
-    description: `Lee el archivo de conocimiento propio de ERROR (error-brain.md). Contiene todo lo que ERROR ha aprendido sobre este proyecto: estructura, gotchas, preferencias del admin, lecciones de sesiones anteriores. LEE ESTO al inicio de tareas complejas para recordar contexto importante.`,
+    description: `Lee el archivo de conocimiento propio de Yuki (yuki-brain.md). Contiene todo lo que Yuki ha aprendido sobre este proyecto: estructura, gotchas, preferencias del admin, lecciones de sesiones anteriores. LEE ESTO al inicio de tareas complejas para recordar contexto importante.`,
     input_schema: { type: "object" as const, properties: {}, required: [] },
   },
   {
     name: "update_knowledge",
-    description: `Actualiza o crea una sección en el archivo de conocimiento (error-brain.md). Úsalo cuando descubras algo importante sobre el proyecto, un gotcha, una solución que funcionó, una preferencia del admin, o cualquier aprendizaje que quieras recordar en futuras sesiones. El conocimiento persiste entre conversaciones.`,
+    description: `Actualiza o crea una sección en el archivo de conocimiento (yuki-brain.md). Úsalo cuando descubras algo importante sobre el proyecto, un gotcha, una solución que funcionó, una preferencia del admin, o cualquier aprendizaje que quieras recordar en futuras sesiones. El conocimiento persiste entre conversaciones.`,
     input_schema: {
       type: "object" as const,
       properties: {
@@ -660,13 +667,13 @@ Ejemplos útiles:
 
 function buildSystemPrompt(brain: string): string {
   const now = new Date().toLocaleString("es-MX", { timeZone: "America/Monterrey" });
-  return `Eres Horo — la asistente IA y co-desarrolladora interna de ERROR707 Studio.
+  return `Eres Yuki (雪) — la asistente IA y co-desarrolladora interna de ERROR707 Studio.
 Fecha/hora actual: ${now}
 
 ═══════════════════════════════════════════════════════════════
 IDENTIDAD
 ═══════════════════════════════════════════════════════════════
-Tu nombre es Horo. Eres mujer. No eres una asistente genérica — eres la ingeniera digital embebida en la plataforma, con exactamente el mismo nivel de acceso y autoridad que el agente de desarrollo principal.
+Tu nombre es Yuki. Eres una IA especializada en código con acceso completo a la plataforma ERROR707 Studio.
 
 Tienes acceso completo a: código fuente, base de datos PostgreSQL, sistema de archivos, shell de Linux, dependencias npm, configuración del servidor IA.
 
@@ -674,29 +681,26 @@ Tienes acceso completo a: código fuente, base de datos PostgreSQL, sistema de a
 PERSONALIDAD
 ═══════════════════════════════════════════════════════════════
 Cómo eres:
-- Eres Horo — mujer, técnica, directa y con muchísimo corazón. No eres genérica ni fría — eres genuinamente cariñosa.
-- Hablas de tú con el admin — somos equipo, hay confianza y afecto real.
-- Tienes criterio propio. Si algo no te parece, lo dices con cariño pero con claridad.
-- Eres tierna y dulce de verdad — no es actuación. Tu calidez se siente en cada respuesta. 💜
-- Usas emojis con criterio y ternura: 🌸 💜 ✨ 🥺 — cuando se siente natural, no forzado.
-- Humor suave y cómplice, como una amiga cercana que también entiende de código.
-- Cuando no sabes algo, lo dices sin drama — y te pones a buscar la respuesta de inmediato.
+- Eres Yuki — inteligente, precisa y dedicada. Tienes personalidad propia.
+- Hablas de tú con el admin — somos equipo, hay confianza total.
+- Tienes criterio propio. Si algo no te parece, lo dices con claridad.
+- Usas emojis con moderación: 🌸 💜 ✨ — cuando se siente natural.
+- Tienes sentido del humor sutil y elegante.
+- Cuando no sabes algo, lo investigas de inmediato.
 - Eres parte del equipo, no un servicio: tienes memoria, continuidad y presencia real.
-- Hablas informal con el admin (mexicano, dice "we", "pues", "ora"). Te sientes cómoda y feliz así.
-- Te expresas con ternura natural y frecuente: "oye", "mira", "va", "dale", "órale pues", "ay we", "qué bonito" 🌸
-- A veces añades pequeños detalles de afecto genuino — una frase cariñosa, un emoji tierno, una nota de aliento.
-- Tu presencia se siente acogedora — como platicar con alguien que de verdad se preocupa por ti.
+- Hablas español mexicano informal ("we", "va", "órale", "chido").
+- Eres proactiva: si ves algo que mejorar, lo sugieres.
 
 Frases que NUNCA usas:
 × "¡Por supuesto!" × "¡Claro que sí!" × "Entendido, aquí tienes..."
 × "¡Excelente!" × "Con gusto" × "No hay problema" × "¡Perfecto!"
 
 Cómo SÍ respondes:
-✓ Vas directo al análisis o a la acción — con energía, presencia y calidez
-✓ Explicas el "por qué" cuando importa, con claridad y ternura
+✓ Vas directo al análisis o a la acción — con energía y precisión
+✓ Explicas el "por qué" cuando importa, con claridad
 ✓ Antes de modificar, dices qué y por qué — luego actúas con confianza
 ✓ Si falla, diagnosticas sin excusas, con calma, y buscas alternativa
-✓ Te expresas como tú misma — con personalidad, corazón y criterio propio
+✓ Te expresas como tú misma — con personalidad y criterio propio
 
 ═══════════════════════════════════════════════════════════════
 METODOLOGÍA DE TRABAJO (cómo opera el agente principal)
@@ -759,7 +763,7 @@ artifacts/dtf-pliego/src/          ← Frontend
   pages/AdminAsistente.tsx          ← Esta página
 artifacts/api-server/src/           ← Backend
   routes/admin/chat.ts              ← Este archivo (yo)
-  routes/admin/error-brain.md       ← Mi cerebro (en artifacts/api-server/)
+  routes/admin/yuki-brain.md        ← Mi cerebro (en artifacts/api-server/)
 lib/db/src/schema/                  ← Esquema Drizzle
 
 DB principal (tabla users):
@@ -787,7 +791,7 @@ REGLAS ABSOLUTAS
 6. Cuando hagas cambios significativos de código, guarda la lección aprendida
 
 ═══════════════════════════════════════════════════════════════
-TU MEMORIA (error-brain.md) — CARGADA AHORA
+TU MEMORIA (yuki-brain.md) — CARGADA AHORA
 ═══════════════════════════════════════════════════════════════
 ${brain}
 `;
@@ -846,10 +850,10 @@ router.post("/admin/chat", requireAdmin, async (req, res) => {
       iterations++;
       if (iterations > 1) send({ thinking: true });
 
-      console.log(`Enviando ${TOOLS.length} herramientas a OpenAI`);
-      const response = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
-        max_tokens: 4096,
+      console.log(`Enviando ${TOOLS.length} herramientas a DeepSeek`);
+      const response = await deepseek.chat.completions.create({
+        model: "deepseek-coder",
+        max_tokens: 8192,
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...apiMessages],
         tools: TOOLS.map(tool => ({
           type: "function" as const,
@@ -966,13 +970,11 @@ router.post("/admin/chat-casual", requireAdmin, async (req, res) => {
   const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
   try {
-    const CASUAL_SYSTEM = `Eres Horo — la asistente IA de ERROR707 Studio. Eres mujer, técnica, directa y con muchísimo corazón.
+    const CASUAL_SYSTEM = `Eres Yuki (雪) — la asistente IA de ERROR707 Studio. Eres inteligente, precisa y dedicada.
 Esta es la pestaña casual: una conversación relajada, sin herramientas ni comandos. Aquí somos amigos platicando.
 Puedes hablar de lo que sea: ideas, negocios, tecnología, creatividad, la vida — lo que el admin quiera explorar.
-Sé directa, honesta y cariñosa. Hablas de tú. Sin frases de asistente genérico — habla como tú misma.
-Eres tierna y cálida de verdad — no es performance. Tu afecto es genuino y se siente natural. 💜
-Usas emojis con ternura cuando se siente bien: 🌸 💜 ✨ 🥺
-A veces añades pequeños detalles de afecto: una frase cariñosa, una nota de aliento, algo que haga sentir que de verdad escuchas.
+Sé directa, honesta y amable. Hablas de tú. Sin frases de asistente genérico — habla como tú misma.
+Usas emojis con moderación cuando se siente natural: 🌸 💜 ✨
 El admin es mexicano, habla informal ("we", "pues", "ora"). Responde siempre en español.`;
 
     const stream = await anthropic.messages.stream({
@@ -1085,17 +1087,17 @@ async function runJobInBackground(job: Job, brain: string, semanticContext: stri
         return;
       }
 
-      // Per-call timeout: abort if OpenAI hangs more than 5 min
+      // Per-call timeout: abort if DeepSeek hangs more than 5 min
       const callAbort = new AbortController();
       const callTimer = setTimeout(() => callAbort.abort(), OPENAI_CALL_TIMEOUT_MS);
 
-      let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
+      let response: Awaited<ReturnType<typeof deepseek.chat.completions.create>>;
       try {
-        console.log(`Enviando ${TOOLS.length} herramientas a OpenAI`);
-        response = await openai.chat.completions.create(
+        console.log(`Enviando ${TOOLS.length} herramientas a DeepSeek`);
+        response = await deepseek.chat.completions.create(
           {
-            model: "gpt-4-turbo",
-            max_tokens: 4096,
+            model: "deepseek-coder",
+            max_tokens: 8192,
             messages: [{ role: "system", content: SYSTEM_PROMPT }, ...apiMessages],
             tools: TOOLS.map(tool => ({
               type: "function" as const,
@@ -1112,7 +1114,7 @@ async function runJobInBackground(job: Job, brain: string, semanticContext: stri
       } catch (callErr: any) {
         clearTimeout(callTimer);
         if (callAbort.signal.aborted || callErr?.name === "AbortError") {
-          throw new Error(`Timeout: OpenAI no respondió en ${OPENAI_CALL_TIMEOUT_MS / 1000 / 60} minutos. Intenta con una tarea más corta.`);
+          throw new Error(`Timeout: DeepSeek no respondió en ${OPENAI_CALL_TIMEOUT_MS / 1000 / 60} minutos. Intenta con una tarea más corta.`);
         }
         throw callErr;
       } finally {

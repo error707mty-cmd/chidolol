@@ -1,52 +1,55 @@
 # ERROR707 Studio - PRD
 
 ## Original Problem Statement
-El usuario solicitó:
-1. Cambiar la IA integrada (Horo) a DeepSeek con su propia API key
-2. Renombrarla a "Yuki"
-3. Darle control total sobre la aplicación (modificar, agregar, cambiar aspectos)
-4. Acceso exclusivo solo para el usuario error707mty
+1. Integrar Yuki como IA principal con DeepSeek Coder
+2. Dar control total de la aplicación a Yuki
+3. Acceso exclusivo para error707mty en /yuki
+4. Eliminar todas las referencias a Horo
 
 ## Architecture
 - **Frontend**: React + Vite + TypeScript + Wouter
 - **Backend**: Node.js + Express + PostgreSQL (Drizzle ORM)
-- **AI**: DeepSeek Coder API (antes OpenAI)
+- **AI**: DeepSeek Coder API (reemplazó OpenAI)
 
 ## What's Been Implemented (April 8, 2026)
 
-### Yuki AI Assistant
-- ✅ Nueva ruta `/api/yuki/chat` con DeepSeek Coder integration
-- ✅ Acceso exclusivo verificado por username (solo error707mty)
-- ✅ 18 herramientas de control total:
-  - list_users, get_app_stats, update_user
-  - execute_sql (control total de DB)
-  - list_files, read_file, write_file
-  - search_in_files, grep_file
-  - exec_shell (comandos Linux)
-  - install_package, restart_backend
-  - read_knowledge, update_knowledge, append_knowledge
-  - eval_code (JavaScript arbitrario)
-  - modify_css (cambios en tiempo real)
-  - update_env_config
-- ✅ Frontend exclusivo en `/yuki` con UI personalizada
-- ✅ Pantalla de "Acceso Exclusivo" para otros usuarios
-- ✅ Sistema de memoria persistente (yuki-brain.md)
+### Yuki AI - Migración Completa
+- ✅ Reemplazada API de OpenAI por DeepSeek Coder en todos los endpoints:
+  - `/api/chat` (público)
+  - `/api/admin/chat` (admin streaming)
+  - `/api/admin/chat-job` (admin background jobs)
+  - `/api/admin/chat-casual` (casual streaming)
+  - `/api/yuki/chat` (exclusivo)
+- ✅ Renombrado todas las referencias de "Horo" a "Yuki"
+- ✅ Actualizado ChatAI.tsx - ahora muestra Yuki con DeepSeek Coder
+- ✅ Actualizado AdminAsistente.tsx - ahora muestra Yuki
+- ✅ Página exclusiva /yuki con UI personalizada (acceso solo error707mty)
+- ✅ System prompts actualizados con personalidad de Yuki
+- ✅ Brain file cambiado de error-brain.md a yuki-brain.md
 
-### Files Created/Modified
-- `/app/artifacts/api-server/src/routes/yuki.ts` - Backend de Yuki
-- `/app/artifacts/dtf-pliego/src/pages/Yuki.tsx` - Frontend de Yuki
-- `/app/artifacts/dtf-pliego/src/App.tsx` - Ruta agregada
-- `/app/artifacts/dtf-pliego/src/index.css` - Estilos de Yuki
-- `/app/artifacts/api-server/src/routes/index.ts` - Router actualizado
+### Files Modified
+- `/app/artifacts/api-server/src/routes/chat.ts` - DeepSeek + Yuki
+- `/app/artifacts/api-server/src/routes/admin/chat.ts` - DeepSeek + Yuki
+- `/app/artifacts/api-server/src/routes/yuki.ts` - Endpoint exclusivo
+- `/app/artifacts/dtf-pliego/src/pages/ChatAI.tsx` - UI Yuki
+- `/app/artifacts/dtf-pliego/src/pages/AdminAsistente.tsx` - UI Yuki
+- `/app/artifacts/dtf-pliego/src/pages/Yuki.tsx` - Página exclusiva
+- `/app/artifacts/dtf-pliego/src/App.tsx` - Ruta /yuki
+- `/app/artifacts/dtf-pliego/src/index.css` - Estilos Yuki
 
 ## User Credentials
 - **Admin**: error707mty / buentello0607
 
+## DeepSeek API
+- **Key**: sk-b26b3f46130348688e5eac9cc3d99513
+- **Model**: deepseek-coder
+- **Endpoint**: https://api.deepseek.com
+
 ## Backlog / Future
-- P1: Mejorar persistencia de conversaciones de Yuki
-- P2: Agregar más herramientas especializadas
-- P3: Dashboard de actividad de Yuki
+- P1: Historial de conversaciones persistente para Yuki
+- P2: Dashboard de actividad de Yuki
+- P3: Más herramientas especializadas
 
 ## Next Tasks
-- Probar todas las herramientas de Yuki
-- Crear memoria inicial para Yuki
+- Probar todas las funcionalidades de Yuki
+- Crear memoria inicial (yuki-brain.md)

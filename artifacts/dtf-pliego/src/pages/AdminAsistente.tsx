@@ -539,14 +539,14 @@ export default function AdminAsistente() {
         <div className={`aia-sidebar-overlay${sidebarOpen ? " active" : ""}`} onClick={() => setSidebarOpen(false)} />
         <aside className={`aia-sidebar${sidebarOpen ? " aia-sidebar--open" : ""}`}>
           <div className="aia-sidebar-header">
-            <div className="aia-avatar">
-              <Bot size={22} />
+            <div className="aia-avatar" style={{ background: "linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)" }}>
+              <span style={{ fontSize: "18px" }}>雪</span>
             </div>
             <div>
-              <div className="aia-name">Horo</div>
+              <div className="aia-name">Yuki</div>
               <div className="aia-status">
                 <span className="aia-status-dot" />
-                Activa
+                DeepSeek Coder
               </div>
             </div>
           </div>
@@ -614,7 +614,7 @@ export default function AdminAsistente() {
               <div className="aia-info-card">
                 <div className="aia-info-row">
                   <span>Modelo</span>
-                  <span>claude-sonnet-4-6</span>
+                  <span>deepseek-coder</span>
                 </div>
                 <div className="aia-info-row">
                   <span>Memoria</span>
@@ -630,9 +630,7 @@ export default function AdminAsistente() {
 
           <div className="aia-sidebar-section" style={{ marginTop: "auto", paddingTop: "12px" }}>
             <a
-              href="/api/admin/error"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/yuki"
               style={{
                 display: "flex", alignItems: "center", gap: "8px",
                 padding: "10px 12px", borderRadius: "10px",
@@ -642,12 +640,12 @@ export default function AdminAsistente() {
                 textDecoration: "none", cursor: "pointer",
                 transition: "all 0.15s",
               }}
-              title="Abrir Horo en página independiente — sobrevive cualquier cambio en la app"
+              title="Abrir Yuki en página independiente"
             >
-              <Bot size={16} />
+              <span style={{ fontSize: "16px" }}>雪</span>
               <div>
-                <div>Abrir Horo independiente</div>
-                <div style={{ fontSize: "10px", color: "#7c3aed", fontWeight: 400 }}>Página autónoma — no depende de la app</div>
+                <div>Abrir Yuki independiente</div>
+                <div style={{ fontSize: "10px", color: "#7c3aed", fontWeight: 400 }}>Página exclusiva con control total</div>
               </div>
             </a>
           </div>
@@ -681,11 +679,11 @@ export default function AdminAsistente() {
               </div>
 
               <div className="aia-messages">
-                {trabajoMessages.length === 0 && (
+                {messages.length === 0 && (
                   <div className="aia-empty">
-                    <Bot size={40} />
-                    <h3>Horo lista para trabajar 🔥</h3>
-                    <p>Tengo acceso completo a código, base de datos, shell y configuración IA. Los jobs corren en background — puedes salir de la página sin interrumpir el trabajo.</p>
+                    <div style={{ width: "60px", height: "60px", background: "linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", marginBottom: "12px", boxShadow: "0 4px 20px rgba(139, 92, 246, 0.3)" }}>雪</div>
+                    <h3>Yuki lista para trabajar 🌸</h3>
+                    <p>Tengo acceso completo a código, base de datos, shell y configuración. Los jobs corren en background — puedes salir de la página sin interrumpir el trabajo.</p>
                   </div>
                 )}
                 {trabajoMessages.map((msg, i) => (
@@ -806,9 +804,9 @@ export default function AdminAsistente() {
               <div className="aia-messages">
                 {casualMessages.length === 0 && (
                   <div className="aia-empty">
-                    <MessageCircle size={40} />
+                    <div style={{ width: "60px", height: "60px", background: "linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", marginBottom: "12px", boxShadow: "0 4px 20px rgba(139, 92, 246, 0.3)" }}>雪</div>
                     <h3>Hablemos de lo que quieras ✨</h3>
-                    <p>Ideas, negocios, tecnología, hosting, lo que sea. Sin el modo trabajo, sin herramientas — solo conversación.</p>
+                    <p>Ideas, negocios, tecnología, hosting, lo que sea. Sin el modo trabajo, sin herramientas — solo conversación con Yuki.</p>
                   </div>
                 )}
                 {casualMessages.map((msg, i) => (

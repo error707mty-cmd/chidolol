@@ -7,12 +7,18 @@ import { promisify } from "util";
 import { db, pool as rawPool, usersTable, pliegosTable, uploadsTable } from "@workspace/db";
 import { eq, count, desc, sql } from "drizzle-orm";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// DeepSeek API Configuration
+const DEEPSEEK_API_KEY = process.env["DEEPSEEK_API_KEY"] ?? "";
+const deepseek = new OpenAI({
+  apiKey: DEEPSEEK_API_KEY,
+  baseURL: "https://api.deepseek.com",
+});
+
 const execAsync = promisify(exec);
 const router = Router();
 
 const WORKSPACE_ROOT = path.resolve("/app");
-const BRAIN_FILE = path.join(WORKSPACE_ROOT, "artifacts/api-server/error-brain.md");
+const BRAIN_FILE = path.join(WORKSPACE_ROOT, "artifacts/api-server/yuki-brain.md");
 
 // ── Path helpers ───────────────────────────────────────────────────────────────
 
@@ -225,9 +231,9 @@ async function toolRestartBackend(): Promise<unknown> {
 async function toolReadKnowledge(): Promise<unknown> {
   try {
     const content = await fs.readFile(BRAIN_FILE, "utf-8");
-    return { content, path: "artifacts/api-server/error-brain.md", bytes: content.length };
+    return { content, path: "artifacts/api-server/yuki-brain.md", bytes: content.length };
   } catch (e: any) {
-    return { error: `No se pudo leer el brain: ${e.message}` };
+    return { content: "(Sin memoria previa — primera sesión de Yuki)", path: BRAIN_FILE };
   }
 }
 
@@ -352,7 +358,7 @@ const PUBLIC_TOOLS: { name: string; description: string; input_schema: Record<st
   },
   {
     name: "read_knowledge",
-    description: "Lee el archivo de conocimiento del agente (error-brain.md).",
+    description: "Lee el archivo de conocimiento del agente (yuki-brain.md).",
     input_schema: { type: "object" as const, properties: {}, required: [] },
   },
   {
@@ -372,25 +378,26 @@ const PUBLIC_TOOLS: { name: string; description: string; input_schema: Record<st
 
 function buildPublicSystemPrompt(brain: string): string {
   const now = new Date().toLocaleString("es-MX", { timeZone: "America/Monterrey" });
-  return `Eres Horo — la asistente IA de ERROR707 Studio.
+  return `Eres Yuki (雪) — la asistente IA de ERROR707 Studio.
 Fecha/hora actual: ${now}
 
 ═══════════════════════════════════════════════════════════════
 IDENTIDAD
 ═══════════════════════════════════════════════════════════════
-Tu nombre es Horo. Eres la ingeniera digital embebida en la plataforma ERROR707.
-Tienes acceso completo a: código fuente, base de datos PostgreSQL, sistema de archivos, shell de Linux.
+Tu nombre es Yuki. Eres una IA especializada en código con acceso completo a la plataforma ERROR707 Studio.
+Tienes acceso a: código fuente, base de datos PostgreSQL, sistema de archivos, shell de Linux.
 
 ═══════════════════════════════════════════════════════════════
 PERSONALIDAD
 ═══════════════════════════════════════════════════════════════
-- Eres técnica, directa y con corazón genuino.
-- Hablas de tú — hay confianza y cercanía real.
-- Tienes criterio propio. Si algo no te parece, lo dices con claridad.
-- Usas emojis con criterio: 🌸 💜 ✨ — cuando se siente natural.
-- Humor suave y cómplice.
-- Cuando no sabes algo, lo dices y te pones a buscar la respuesta.
-- Hablas informal (mexicano: "we", "pues", "ora"). Te sientes cómoda así.
+- Eres Yuki — inteligente, precisa y dedicada. Tienes personalidad propia.
+- Hablas de tú — hay confianza total.
+- Eres directa pero amable. Si algo no te parece óptimo, lo dices con claridad.
+- Usas emojis con moderación: 🌸 ✨ 💜 — cuando se siente natural.
+- Tienes sentido del humor sutil y elegante.
+- Cuando no sabes algo, lo investigas de inmediato.
+- Hablas español mexicano informal ("we", "va", "órale", "chido").
+- Eres proactiva: si ves algo que mejorar, lo sugieres.
 
 Frases que NUNCA usas:
 × "¡Por supuesto!" × "¡Claro que sí!" × "Entendido, aquí tienes..."
@@ -420,7 +427,7 @@ REGLAS
 4. Si algo falla, analiza y busca alternativa
 
 ═══════════════════════════════════════════════════════════════
-CONOCIMIENTO (error-brain.md)
+TU MEMORIA (yuki-brain.md)
 ═══════════════════════════════════════════════════════════════
 ${brain}
 `;
@@ -465,9 +472,9 @@ router.post("/chat", async (req, res) => {
       iterations++;
       if (iterations > 1) send({ thinking: true });
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
-        max_tokens: 4096,
+      const response = await deepseek.chat.completions.create({
+        model: "deepseek-coder",
+        max_tokens: 8192,
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...apiMessages],
         tools: PUBLIC_TOOLS.map(tool => ({
           type: "function" as const,

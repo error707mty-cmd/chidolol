@@ -298,14 +298,14 @@ export default function ChatAI() {
         {/* ── Sidebar ── */}
         <aside className="aia-sidebar">
           <div className="aia-sidebar-header">
-            <div className="aia-avatar">
-              <Bot size={22} />
+            <div className="aia-avatar" style={{ background: "linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)" }}>
+              <span style={{ fontSize: "18px" }}>雪</span>
             </div>
             <div>
-              <div className="aia-name">Horo</div>
+              <div className="aia-name">Yuki</div>
               <div className="aia-status">
                 <span className="aia-status-dot" />
-                Activa
+                DeepSeek Coder
               </div>
             </div>
           </div>
@@ -343,11 +343,11 @@ export default function ChatAI() {
             <div className="aia-info-card">
               <div className="aia-info-row">
                 <span>Modelo</span>
-                <span>gpt-4-turbo</span>
+                <span>deepseek-coder</span>
               </div>
               <div className="aia-info-row">
                 <span>Herramientas</span>
-                <span>13 activas</span>
+                <span>18 activas</span>
               </div>
               <div className="aia-info-row">
                 <span>Acceso</span>
@@ -427,8 +427,8 @@ export default function ChatAI() {
             <div className="aia-messages">
               {messages.length === 0 && (
                 <div className="aia-empty">
-                  <Bot size={44} />
-                  <h3>Horo lista para ayudarte 🔥</h3>
+                  <div style={{ width: "60px", height: "60px", background: "linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", marginBottom: "12px", boxShadow: "0 4px 20px rgba(139, 92, 246, 0.3)" }}>雪</div>
+                  <h3>Yuki lista para ayudarte 🌸</h3>
                   <p>
                     Tengo acceso completo a código, base de datos, shell y
                     configuración. Pregúntame lo que necesites — puedo leer
@@ -483,7 +483,7 @@ export default function ChatAI() {
                   className="aia-input"
                   placeholder={
                     loading
-                      ? "Horo está procesando..."
+                      ? "Yuki está procesando..."
                       : "Escribe tu pregunta o tarea... (Enter para enviar, Shift+Enter para nueva línea)"
                   }
                   value={input}
