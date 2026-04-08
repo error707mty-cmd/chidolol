@@ -154,8 +154,9 @@ export default function Yuki() {
   const terminalEndRef = useRef<HTMLDivElement>(null);
   
   // GitHub
-  const [githubConfig, setGithubConfig] = useState<{ repoUrl?: string; tokenSet?: boolean } | null>(null);
+  const [githubConfig, setGithubConfig] = useState<{ repoUrl?: string; tokenSet?: boolean; cloned?: boolean; clonedPath?: string } | null>(null);
   const [pushing, setPushing] = useState(false);
+  const [cloning, setCloning] = useState(false);
   const [showGithubModal, setShowGithubModal] = useState(false);
   const [githubForm, setGithubForm] = useState({ repoUrl: "", token: "" });
 
@@ -213,6 +214,17 @@ export default function Yuki() {
         setGithubConfig(data);
         setGithubForm({ repoUrl: data.repoUrl || "", token: "" });
       }
+      
+      // Check cloned repo status
+      const clonedRes = await fetch(`${API_BASE}/github/cloned-repo`, { headers: { Authorization: `Bearer ${token}` } });
+      if (clonedRes.ok) {
+        const clonedData = await clonedRes.json();
+        setGithubConfig(prev => ({
+          ...prev,
+          cloned: clonedData.cloned,
+          clonedPath: clonedData.clonePath,
+        }));
+      }
     } catch {}
   };
 
@@ -226,13 +238,40 @@ export default function Yuki() {
       if (res.ok) {
         showToast("success", "Configuración de GitHub guardada ✅");
         await loadGitHubConfig();
-        setShowGithubModal(false);
       } else {
         showToast("error", "Error al guardar configuración");
       }
     } catch {
       showToast("error", "Error de conexión");
     }
+  };
+
+  const cloneRepository = async () => {
+    if (!githubConfig?.repoUrl || !githubConfig?.tokenSet) {
+      showToast("error", "Configura el repositorio y token primero");
+      return;
+    }
+    
+    setCloning(true);
+    try {
+      const res = await fetch(`${API_BASE}/github/clone`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        showToast("success", `Repositorio clonado en ${data.clonedPath} 🎉`);
+        await loadGitHubConfig();
+      } else {
+        const error = await res.json();
+        showToast("error", error.error || "Error al clonar repositorio");
+      }
+    } catch (err) {
+      showToast("error", "Error de conexión al clonar");
+    }
+    setCloning(false);
   };
 
   const saveProvider = async () => {
@@ -903,12 +942,26 @@ export default function Yuki() {
             <div className="yk-modal-body">
               <div className="yk-github-info">
                 <p>Configura tu repositorio de GitHub y token de acceso personal (PAT) para habilitar el push automático.</p>
-                {githubConfig?.tokenSet && (
-                  <div className="yk-github-status">
-                    <Check size={14} />
-                    <span>Token configurado ✓</span>
-                  </div>
-                )}
+                <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+                  {githubConfig?.tokenSet && (
+                    <div className="yk-github-status">
+                      <Check size={14} />
+                      <span>Token configurado ✓</span>
+                    </div>
+                  )}
+                  {githubConfig?.cloned && (
+                    <div className="yk-github-status" style={{ background: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgba(34, 197, 94, 0.3)' }}>
+                      <Check size={14} style={{ color: '#22c55e' }} />
+                      <span style={{ color: '#22c55e' }}>Repo clonado ✓</span>
+                    </div>
+                  )}
+                  {!githubConfig?.cloned && githubConfig?.repoUrl && (
+                    <div className="yk-github-status" style={{ background: 'rgba(234, 179, 8, 0.1)', borderColor: 'rgba(234, 179, 8, 0.3)' }}>
+                      <AlertCircle size={14} style={{ color: '#eab308' }} />
+                      <span style={{ color: '#eab308' }}>Repo no clonado</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="yk-github-form">
@@ -948,12 +1001,39 @@ export default function Yuki() {
             <div className="yk-modal-footer">
               <button className="yk-btn-secondary" onClick={() => setShowGithubModal(false)}>Cancelar</button>
               <button 
+                className="yk-btn-secondary" 
+                onClick={cloneRepository}
+                disabled={cloning || !githubConfig?.repoUrl || !githubConfig?.tokenSet}
+                style={{ 
+                  background: githubConfig?.cloned ? 'rgba(34, 197, 94, 0.1)' : 'rgba(139, 92, 246, 0.1)',
+                  borderColor: githubConfig?.cloned ? 'rgba(34, 197, 94, 0.3)' : 'rgba(139, 92, 246, 0.3)',
+                  color: githubConfig?.cloned ? '#22c55e' : 'var(--yk-accent)'
+                }}
+              >
+                {cloning ? (
+                  <>
+                    <Loader2 size={14} className="yk-spin" />
+                    Clonando...
+                  </>
+                ) : githubConfig?.cloned ? (
+                  <>
+                    <Check size={14} />
+                    Re-clonar Repo
+                  </>
+                ) : (
+                  <>
+                    <GitBranch size={14} />
+                    Clonar Repo
+                  </>
+                )}
+              </button>
+              <button 
                 className="yk-btn-primary" 
                 onClick={saveGitHubConfig}
                 disabled={!githubForm.repoUrl || !githubForm.token}
               >
                 <Save size={14} />
-                Guardar
+                Guardar Config
               </button>
             </div>
           </div>

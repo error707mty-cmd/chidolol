@@ -89,45 +89,16 @@ router.post("/github/config", requireYukiAccess, async (req, res) => {
       repoUrl: repoUrl || existingConfig?.repoUrl || "",
       token: token || existingConfig?.token || "",
       lastPush: existingConfig?.lastPush,
+      clonedPath: existingConfig?.clonedPath,
     };
-    
-    // If repoUrl changed, clone the new repo
-    if (repoUrl && repoUrl !== existingConfig?.repoUrl) {
-      const repoMatch = repoUrl.match(/github\.com[/:]([^/]+)\/([^/.]+)/);
-      if (repoMatch) {
-        const repoName = repoMatch[2].replace(/\.git$/, "");
-        const clonePath = path.join(REPOS_DIR, repoName);
-        
-        // Create repos directory if it doesn't exist
-        await fs.mkdir(REPOS_DIR, { recursive: true });
-        
-        // Clone repo (remove existing directory first)
-        try {
-          await execAsync(`rm -rf "${clonePath}"`);
-          const cloneUrl = token ? repoUrl.replace("github.com", `${token}@github.com`) : repoUrl;
-          await execAsync(`git clone "${cloneUrl}" "${clonePath}"`, {
-            timeout: 120000,
-            env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
-          });
-          newConfig.clonedPath = clonePath;
-        } catch (cloneErr: any) {
-          res.status(500).json({ 
-            error: "Error al clonar repositorio", 
-            details: cloneErr.message,
-          });
-          return;
-        }
-      }
-    }
     
     await saveGitHubConfig(newConfig);
     
     res.json({
       success: true,
-      message: "Configuración guardada y repositorio clonado ✅",
+      message: "Configuración guardada ✅",
       repoUrl: newConfig.repoUrl,
       tokenSet: !!newConfig.token,
-      clonedPath: newConfig.clonedPath,
     });
   } catch (err) {
     res.status(500).json({ error: String(err) });
@@ -257,6 +228,66 @@ router.get("/github/status", requireYukiAccess, async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: String(err) });
+  }
+});
+
+// ── POST /api/github/clone — Clone repository ──────────────────────────────
+router.post("/github/clone", requireYukiAccess, async (req, res) => {
+  try {
+    const config = await loadGitHubConfig();
+    
+    if (!config || !config.repoUrl || !config.token) {
+      res.status(400).json({ error: "GitHub no configurado. Configura el repositorio y token primero." });
+      return;
+    }
+    
+    // Parse repo URL
+    const repoMatch = config.repoUrl.match(/github\.com[/:]([^/]+)\/([^/.]+)/);
+    if (!repoMatch) {
+      res.status(400).json({ error: "URL de repositorio inválida" });
+      return;
+    }
+    
+    const [, owner, repo] = repoMatch;
+    const repoName = repo.replace(/\.git$/, "");
+    const targetClonePath = path.join(REPOS_DIR, repoName);
+    
+    // Create repos directory
+    await fs.mkdir(REPOS_DIR, { recursive: true });
+    
+    // Remove existing clone if exists
+    try {
+      await execAsync(`rm -rf "${targetClonePath}"`);
+    } catch {}
+    
+    // Clone repo
+    const cloneUrl = config.repoUrl.replace("github.com", `${config.token}@github.com`);
+    try {
+      const { stdout, stderr } = await execAsync(`git clone "${cloneUrl}" "${targetClonePath}"`, {
+        timeout: 120000,
+        env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+      });
+      
+      // Update config with cloned path
+      config.clonedPath = targetClonePath;
+      await saveGitHubConfig(config);
+      
+      res.json({
+        success: true,
+        message: "Repositorio clonado exitosamente ✅",
+        clonedPath: targetClonePath,
+        repoName,
+        output: (stdout + stderr).slice(0, 500),
+      });
+    } catch (cloneErr: any) {
+      res.status(500).json({
+        error: "Error al clonar repositorio",
+        details: cloneErr.message,
+        stderr: cloneErr.stderr?.slice(0, 500),
+      });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: "Error al clonar repositorio", details: err.message });
   }
 });
 
