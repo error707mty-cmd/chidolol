@@ -144,13 +144,20 @@ async function toolListFiles(directory: string): Promise<unknown> {
 
 // Tool: Read file
 async function toolReadFile(filePath: string): Promise<unknown> {
-  const fullPath = resolveSafePath(filePath);
+  const fullPath = await resolveSafePath(filePath);
   if (!fullPath) return { error: "Ruta no válida" };
   try {
     const stat = await fs.stat(fullPath);
     if (stat.size > 500_000) return { error: "Archivo >500KB" };
     const content = await fs.readFile(fullPath, "utf-8");
-    return { path: filePath, content, lines: content.split("\n").length };
+    
+    const clonedRepo = await getClonedRepoPath();
+    return { 
+      path: fullPath,
+      repoPath: clonedRepo,
+      content, 
+      lines: content.split("\n").length 
+    };
   } catch (e) {
     return { error: String(e) };
   }
@@ -159,18 +166,24 @@ async function toolReadFile(filePath: string): Promise<unknown> {
 // Tool: Write file (CREATE OR OVERWRITE)
 async function toolWriteFile(filePath: string, content: string): Promise<unknown> {
   if (isWriteBlocked(filePath)) return { error: `Ruta bloqueada: ${filePath}` };
-  const fullPath = resolveSafePath(filePath);
+  const fullPath = await resolveSafePath(filePath);
   if (!fullPath) return { error: "Ruta no válida" };
   try {
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
     await fs.writeFile(fullPath, content, "utf-8");
-    const isFrontend = filePath.includes("dtf-pliego/src");
+    
+    const clonedRepo = await getClonedRepoPath();
+    const isInClonedRepo = clonedRepo && fullPath.startsWith(clonedRepo);
+    
     return {
       success: true,
-      path: filePath,
+      path: fullPath,
+      repoPath: clonedRepo,
+      isClonedRepo: isInClonedRepo,
       lines: content.split("\n").length,
-      hotReload: isFrontend,
-      message: isFrontend ? "✅ Cambio aplicado — Hot reload activo" : "✅ Archivo guardado",
+      message: isInClonedRepo 
+        ? "✅ Archivo guardado en repo clonado" 
+        : "✅ Archivo guardado",
     };
   } catch (e) {
     return { error: String(e) };

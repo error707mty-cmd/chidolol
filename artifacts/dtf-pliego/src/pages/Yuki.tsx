@@ -655,6 +655,15 @@ export default function Yuki() {
           )}
           
           <div className="yk-chat-input">
+            {loading && (
+              <div className="yk-loading-bar">
+                <div className="yk-loading-progress" style={{ width: `${toolProgress}%` }}></div>
+                <div className="yk-loading-text">
+                  <span className="yk-loading-icon">⚡</span>
+                  <span>{currentTool}</span>
+                </div>
+              </div>
+            )}
             <div className="yk-input-actions">
               <input
                 type="file"
