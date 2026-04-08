@@ -3,7 +3,6 @@ import jwt from "jsonwebtoken";
 import { db, pool as rawPool, usersTable, pliegosTable, uploadsTable } from "@workspace/db";
 import { eq, count, desc, sql } from "drizzle-orm";
 import OpenAI from "openai";
-import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
@@ -548,22 +547,14 @@ router.post("/yuki/chat", requireYukiAccess, async (req, res) => {
     let userMessages = messages.map((m) => ({ role: m.role, content: m.content }));
     if (attachments?.length) {
       const attachInfo = attachments.map((a) => `[Archivo adjunto: ${a.name} (${a.type}) en ${a.path}]`).join("\n");
-      const lastUserIdx = userMessages.findLastIndex((m) => m.role === "user");
-      if (lastUserIdx >= 0) {
+      const lastUserIdx = userMessages.length - 1 - [...userMessages].reverse().findIndex((m: any) => m.role === "user");
+      if (lastUserIdx >= 0 && lastUserIdx < userMessages.length) {
         userMessages[lastUserIdx].content = `${attachInfo}\n\n${userMessages[lastUserIdx].content}`;
       }
     }
 
     // Create AI client based on provider
-    let client: OpenAI;
-    if (provider.baseUrl?.includes("anthropic")) {
-      // Use Anthropic SDK
-      const anthropic = new Anthropic({ apiKey: provider.apiKey });
-      // ... handle Anthropic separately if needed
-      // For now, we'll use OpenAI-compatible API
-    }
-    
-    client = new OpenAI({
+    const client = new OpenAI({
       apiKey: provider.apiKey,
       baseURL: provider.baseUrl || undefined,
     });
@@ -589,10 +580,10 @@ router.post("/yuki/chat", requireYukiAccess, async (req, res) => {
 
       const message = response.choices[0].message;
       const textContent = message.content ?? "";
-      const toolCalls = (message.tool_calls ?? []).map((tc) => ({
+      const toolCalls = (message.tool_calls ?? []).map((tc: any) => ({
         id: tc.id,
-        name: tc.function.name,
-        input: JSON.parse(tc.function.arguments || "{}"),
+        name: tc.function?.name || "",
+        input: JSON.parse(tc.function?.arguments || "{}"),
       }));
 
       if (textContent) send({ content: textContent });
