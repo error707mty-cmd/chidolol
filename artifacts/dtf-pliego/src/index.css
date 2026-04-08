@@ -6917,6 +6917,10 @@ input[type="number"] {
   .yk-focus .yk-mobile-menu-btn { display: none; }
   
 
+  border-color: var(--yk-border-strong);
+  color: var(--yk-text);
+}
+
 /* Providers List */
 .yk-providers-list {
   display: flex;
