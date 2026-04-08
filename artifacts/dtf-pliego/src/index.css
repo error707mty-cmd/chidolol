@@ -7139,6 +7139,9 @@ input[type="number"] {
 }
 
 .yk-thinking-text {
+  font-size: 11px;
+  color: var(--yk-text-muted);
+}
 
 /* Loading Bar - Minimalista */
 .yk-loading-bar {
@@ -7202,16 +7205,6 @@ input[type="number"] {
 
 .yk-input-wrapper:has(.yk-loading-bar) {
   padding-top: 32px;
-}
-
-  font-size: 12px;
-  color: var(--yk-text-tertiary);
-  font-weight: 500;
-}
-
-  font-size: 13px;
-  outline: none;
-  transition: all 0.2s;
 }
 
 .yk-provider-form input:focus {
