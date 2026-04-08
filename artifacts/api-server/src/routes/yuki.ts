@@ -54,7 +54,13 @@ interface YukiConfig {
 async function loadConfig(): Promise<YukiConfig> {
   try {
     const content = await fs.readFile(CONFIG_FILE, "utf-8");
-    return JSON.parse(content);
+    const config = JSON.parse(content);
+    // Ensure DeepSeek provider has the latest API key from env
+    const deepseekProvider = config.providers.find((p: AIProvider) => p.id === "deepseek-default");
+    if (deepseekProvider && process.env["DEEPSEEK_API_KEY"]) {
+      deepseekProvider.apiKey = process.env["DEEPSEEK_API_KEY"];
+    }
+    return config;
   } catch {
     // Default config with DeepSeek
     const defaultConfig: YukiConfig = {

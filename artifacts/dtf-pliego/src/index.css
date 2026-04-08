@@ -6861,6 +6861,37 @@ input[type="number"] {
   .yk-modal-body { max-height: 50vh; }
 }
 
+
+/* Presets */
+.yk-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.yk-preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.yk-preset-buttons button {
+  padding: 6px 12px;
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 6px;
+  color: var(--yk-accent);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.yk-preset-buttons button:hover {
+  background: rgba(139, 92, 246, 0.15);
+  transform: translateY(-1px);
+}
+
 @media (max-width: 480px) {
   .yk-header { padding: 0 12px; }
   .yk-logo-text { display: none; }
