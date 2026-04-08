@@ -6170,25 +6170,40 @@ input[type="number"] {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 20px;
-  animation: fadeIn 0.4s ease;
+  padding: 48px 32px;
+  animation: fadeIn 0.6s ease;
 }
 
 .yk-empty-icon {
-  width: 56px;
-  height: 56px;
+  width: 72px;
+  height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(129, 140, 248, 0.15));
-  border-radius: 16px;
-  margin-bottom: 14px;
-  animation: bounce 2.5s ease-in-out infinite;
+  font-size: 36px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(129, 140, 248, 0.1) 50%, transparent 70%);
+  border: 2px solid rgba(139, 92, 246, 0.3);
+  border-radius: 20px;
+  margin-bottom: 20px;
+  animation: pulse 3s ease-in-out infinite;
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.25), inset 0 0 20px rgba(139, 92, 246, 0.1);
 }
 
-.yk-empty h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-.yk-empty p { font-size: 13px; color: var(--yk-text-muted); margin-bottom: 18px; }
+.yk-empty h3 { 
+  font-size: 22px; 
+  font-weight: 700; 
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+  color: var(--yk-text);
+}
+
+.yk-empty p { 
+  font-size: 14px; 
+  color: var(--yk-text-muted); 
+  margin-bottom: 24px;
+  line-height: 1.6;
+  max-width: 300px;
+}
 
 .yk-quick-actions {
   display: flex;
