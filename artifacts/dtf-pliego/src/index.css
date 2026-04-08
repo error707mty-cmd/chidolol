@@ -7079,9 +7079,15 @@ input[type="number"] {
   border-radius: 8px;
   color: var(--yk-text);
   font-size: 13px;
+  outline: none;
+  transition: all 0.2s;
+}
 
-/* GitHub Config */
-.yk-github-info {
+.yk-provider-form input:focus {
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.08);
+}
+
   padding: 12px 16px;
   background: rgba(139, 92, 246, 0.05);
   border: 1px solid rgba(139, 92, 246, 0.15);
