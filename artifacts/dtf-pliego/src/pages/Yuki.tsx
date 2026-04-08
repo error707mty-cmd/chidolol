@@ -6,7 +6,7 @@ import {
   Eye, Trash2, Upload, Terminal, Play,
   Maximize2, Minimize2, Menu, ChevronLeft,
   Plus, Image, Paperclip, Bot, Sparkles,
-  FileCode, Cpu, Key, Zap
+  FileCode, Cpu, Key, Zap, GitBranch, Save
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -112,6 +112,8 @@ export default function Yuki() {
   // GitHub
   const [githubConfig, setGithubConfig] = useState<{ repoUrl?: string; tokenSet?: boolean } | null>(null);
   const [pushing, setPushing] = useState(false);
+  const [showGithubModal, setShowGithubModal] = useState(false);
+  const [githubForm, setGithubForm] = useState({ repoUrl: "", token: "" });
 
   // Effects
   useEffect(() => {
@@ -162,8 +164,31 @@ export default function Yuki() {
   const loadGitHubConfig = async () => {
     try {
       const res = await fetch(`${API_BASE}/github/config`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setGithubConfig(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setGithubConfig(data);
+        setGithubForm({ repoUrl: data.repoUrl || "", token: "" });
+      }
     } catch {}
+  };
+
+  const saveGitHubConfig = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/github/config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(githubForm),
+      });
+      if (res.ok) {
+        showToast("success", "Configuración de GitHub guardada ✅");
+        await loadGitHubConfig();
+        setShowGithubModal(false);
+      } else {
+        showToast("error", "Error al guardar configuración");
+      }
+    } catch {
+      showToast("error", "Error de conexión");
+    }
   };
 
   const saveProvider = async () => {
@@ -462,8 +487,11 @@ export default function Yuki() {
           <button className="yk-header-btn" onClick={() => setPreviewKey(k => k + 1)} title="Refrescar">
             <RefreshCw size={16} />
           </button>
-          <button className="yk-header-btn" onClick={() => setShowSettings(true)} title="Config">
+          <button className="yk-header-btn" onClick={() => setShowSettings(true)} title="Config IA">
             <Settings size={16} />
+          </button>
+          <button className="yk-header-btn" onClick={() => setShowGithubModal(true)} title="Config GitHub">
+            <GitBranch size={16} />
           </button>
           <button 
             className={`yk-push-btn ${pushing ? "yk-pushing" : ""}`} 
@@ -506,8 +534,11 @@ export default function Yuki() {
             {messages.length === 0 ? (
               <div className="yk-empty">
                 <div className="yk-empty-icon">雪</div>
-                <h3>Yuki IDE</h3>
-                <p>Dime qué quieres y lo haré automáticamente</p>
+                <h3>Yuki IDE - Autónomo</h3>
+                <p>Hola error707mty, soy Yuki. Dime qué quieres y lo haré automáticamente.</p>
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginTop: '8px' }}>
+                  Control total sobre ERROR707 Studio • Railway Deployment • PostgreSQL
+                </p>
                 <div className="yk-quick-actions">
                   {[
                     { icon: Sparkles, text: "Cambia el color principal a azul" },
@@ -795,6 +826,75 @@ export default function Yuki() {
 
             <div className="yk-modal-footer">
               <button className="yk-btn-secondary" onClick={() => setShowSettings(false)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GitHub Config Modal */}
+      {showGithubModal && (
+        <div className="yk-modal-overlay" onClick={() => setShowGithubModal(false)}>
+          <div className="yk-modal" onClick={e => e.stopPropagation()}>
+            <div className="yk-modal-header">
+              <h3><GitBranch size={18} /> Configuración de GitHub</h3>
+              <button onClick={() => setShowGithubModal(false)}><X size={18} /></button>
+            </div>
+            
+            <div className="yk-modal-body">
+              <div className="yk-github-info">
+                <p>Configura tu repositorio de GitHub y token de acceso personal (PAT) para habilitar el push automático.</p>
+                {githubConfig?.tokenSet && (
+                  <div className="yk-github-status">
+                    <Check size={14} />
+                    <span>Token configurado ✓</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="yk-github-form">
+                <label>Repositorio URL</label>
+                <input
+                  type="text"
+                  placeholder="https://github.com/usuario/repo.git"
+                  value={githubForm.repoUrl}
+                  onChange={e => setGithubForm(prev => ({ ...prev, repoUrl: e.target.value }))}
+                />
+                <span className="yk-hint">Ejemplo: https://github.com/tu-usuario/tu-repo.git</span>
+
+                <label>Personal Access Token (PAT)</label>
+                <input
+                  type="password"
+                  placeholder="ghp_xxxxxxxxxxxx"
+                  value={githubForm.token}
+                  onChange={e => setGithubForm(prev => ({ ...prev, token: e.target.value }))}
+                />
+                <span className="yk-hint">
+                  Genera un token en: GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+                </span>
+              </div>
+
+              <div className="yk-github-help">
+                <h4>¿Cómo obtener un token?</h4>
+                <ol>
+                  <li>Ve a tu perfil de GitHub → Settings</li>
+                  <li>Navega a: Developer settings → Personal access tokens → Tokens (classic)</li>
+                  <li>Click en "Generate new token (classic)"</li>
+                  <li>Selecciona el scope: <code>repo</code> (Full control of private repositories)</li>
+                  <li>Copia el token y pégalo arriba</li>
+                </ol>
+              </div>
+            </div>
+
+            <div className="yk-modal-footer">
+              <button className="yk-btn-secondary" onClick={() => setShowGithubModal(false)}>Cancelar</button>
+              <button 
+                className="yk-btn-primary" 
+                onClick={saveGitHubConfig}
+                disabled={!githubForm.repoUrl || !githubForm.token}
+              >
+                <Save size={14} />
+                Guardar
+              </button>
             </div>
           </div>
         </div>
