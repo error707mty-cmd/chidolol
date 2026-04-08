@@ -1,55 +1,45 @@
 # ERROR707 Studio - PRD
 
-## Original Problem Statement
-1. Crear Yuki IDE con preview en tiempo real
-2. Push a GitHub con un click
-3. Poder modificar repo y token cuando quiera
-4. Interfaz simple siguiendo la línea de diseño
-
-## Architecture
-- **Frontend**: React + Vite + TypeScript + Wouter
-- **Backend**: Node.js + Express + PostgreSQL (Drizzle ORM)
-- **AI**: DeepSeek Coder API
-- **VCS**: Git + GitHub API
-
 ## What's Been Implemented (April 8, 2026)
 
-### Yuki IDE - Interfaz Completa
-- ✅ Layout estilo IDE: Chat izquierda + Preview derecha
-- ✅ Preview en tiempo real con iframe de la app
-- ✅ Botón Push para subir cambios a GitHub
-- ✅ Modal de configuración GitHub (repo URL + token)
-- ✅ Indicadores de git: branch actual, número de cambios
-- ✅ Botón refrescar preview
-- ✅ Auto-refresh del preview después de cambios de Yuki
-- ✅ Diseño consistente con tema purple/violet
+### Yuki IDE - Diseño Minimalista
+- ✅ Layout limpio: Chat izquierda + Panel derecho con tabs
+- ✅ Animaciones suaves: fadeIn, slideUp, scaleIn, bounce, pulse
+- ✅ Tabs: Preview | Archivos | Terminal
+- ✅ Preview en tiempo real con auto-refresh
+- ✅ Terminal integrada con ejecución de comandos
+- ✅ Explorador de archivos
+- ✅ Git status en header (branch + cambios pendientes)
+- ✅ Push a GitHub con un click
+- ✅ Modal de configuración GitHub editable
 
-### GitHub Integration
-- ✅ Endpoint GET /api/github/config - Obtener configuración
-- ✅ Endpoint POST /api/github/config - Guardar configuración
-- ✅ Endpoint POST /api/github/push - Push a GitHub
-- ✅ Endpoint GET /api/github/status - Estado de git
-- ✅ Configuración persistente en .github-config.json
-- ✅ Acceso exclusivo para error707mty
+### Características como Emergent Agent
+- ✅ Modificar cualquier archivo del proyecto
+- ✅ Ver preview en tiempo real
+- ✅ Terminal para ejecutar comandos
+- ✅ Explorador de archivos
+- ✅ Push a GitHub directo
+- ✅ Control total sobre código, DB, shell
 
-### Files Created/Modified
-- `/app/artifacts/api-server/src/routes/github.ts` - Backend GitHub
-- `/app/artifacts/dtf-pliego/src/pages/Yuki.tsx` - Nueva interfaz IDE
-- `/app/artifacts/dtf-pliego/src/index.css` - Estilos IDE
-- `/app/artifacts/api-server/.github-config.json` - Config GitHub
+### Animaciones
+- fadeIn - Entrada suave
+- slideUp - Mensajes nuevos
+- scaleIn - Modales
+- bounce - Icono de Yuki
+- pulse - Indicador de git
+- typing - Dots de "pensando"
 
-## User Credentials
+### Files Modified
+- `/app/artifacts/dtf-pliego/src/pages/Yuki.tsx` - Nueva interfaz minimalista
+- `/app/artifacts/dtf-pliego/src/index.css` - Estilos con animaciones
+- `/app/artifacts/api-server/src/routes/github.ts` - API GitHub
+
+## Credentials
 - **Admin**: error707mty / buentello0607
+- **GitHub**: https://github.com/error707mty-cmd/chidolol
 
-## GitHub Config
-- **Repo**: https://github.com/error707mty-cmd/chidolol
-- **Token**: Configurado (github_pat_...Fv3A)
-
-## Next Tasks
-- Probar push a GitHub
-- Probar modificaciones en tiempo real con Yuki
-
-## Backlog
-- P1: Historial de commits en el IDE
-- P2: Diff viewer antes de push
-- P3: Branch selector
+## Tech Stack
+- React + Vite + TypeScript
+- Node.js + Express + PostgreSQL
+- DeepSeek Coder API
+- Git + GitHub API
