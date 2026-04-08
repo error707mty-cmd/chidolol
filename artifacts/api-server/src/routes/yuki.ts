@@ -138,34 +138,55 @@ function requireYukiAccess(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TOOL IMPLEMENTATIONS - FULL AUTONOMOUS CONTROL
+// TOOL IMPLEMENTATIONS - WORKING ONLY IN CLONED REPO
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Path helpers
-function resolveSafePath(relativePath: string): string | null {
+// Path helpers - NOW RELATIVE TO CLONED REPO
+async function getRepoBasePath(): Promise<string | null> {
+  const clonedPath = await getClonedRepoPath();
+  return clonedPath;
+}
+
+async function resolveSafePathInRepo(relativePath: string): Promise<string | null> {
+  const repoBase = await getRepoBasePath();
+  if (!repoBase) return null;
+  
+  // Normalize and remove leading slashes
   const normalized = path.normalize(relativePath).replace(/^\/+/, "");
+  
+  // Block parent directory traversal
   if (normalized.includes("..")) return null;
-  const full = path.join(WORKSPACE_ROOT, normalized);
-  if (!full.startsWith(WORKSPACE_ROOT + path.sep) && full !== WORKSPACE_ROOT) return null;
+  
+  // Resolve relative to cloned repo
+  const full = path.join(repoBase, normalized);
+  
+  // Ensure path is within cloned repo
+  if (!full.startsWith(repoBase + path.sep) && full !== repoBase) return null;
+  
   return full;
 }
 
-const BLOCKED_WRITE = [".git/", "node_modules/", "pnpm-lock.yaml"];
+const BLOCKED_WRITE = [".git/", "node_modules/", "pnpm-lock.yaml", "package-lock.json"];
 function isWriteBlocked(relativePath: string): boolean {
   return BLOCKED_WRITE.some((b) => relativePath.includes(b));
 }
 
 // Tool: List files
 async function toolListFiles(directory: string): Promise<unknown> {
-  const fullPath = resolveSafePath(directory);
-  if (!fullPath) return { error: "Ruta no válida" };
+  const fullPath = await resolveSafePathInRepo(directory);
+  if (!fullPath) return { error: "Ruta no válida o repo no clonado" };
   try {
     const entries = await fs.readdir(fullPath, { withFileTypes: true });
-    return entries.slice(0, 100).map((e) => ({
-      name: e.name,
-      type: e.isDirectory() ? "directory" : "file",
-      path: path.join(directory, e.name).replace(/\\/g, "/"),
-    }));
+    const repoBase = await getRepoBasePath();
+    return {
+      directory: fullPath.replace(repoBase || "", ""),
+      repoBase,
+      files: entries.slice(0, 100).map((e) => ({
+        name: e.name,
+        type: e.isDirectory() ? "directory" : "file",
+        path: path.join(directory, e.name).replace(/\\/g, "/"),
+      })),
+    };
   } catch (e) {
     return { error: String(e) };
   }
@@ -173,19 +194,21 @@ async function toolListFiles(directory: string): Promise<unknown> {
 
 // Tool: Read file
 async function toolReadFile(filePath: string): Promise<unknown> {
-  const fullPath = await resolveSafePath(filePath);
-  if (!fullPath) return { error: "Ruta no válida" };
+  const fullPath = await resolveSafePathInRepo(filePath);
+  if (!fullPath) return { error: "Ruta no válida o repo no clonado" };
   try {
     const stat = await fs.stat(fullPath);
     if (stat.size > 500_000) return { error: "Archivo >500KB" };
     const content = await fs.readFile(fullPath, "utf-8");
     
-    const clonedRepo = await getClonedRepoPath();
+    const repoBase = await getRepoBasePath();
     return { 
-      path: fullPath,
-      repoPath: clonedRepo,
+      path: filePath,
+      fullPath,
+      repoBase,
       content, 
-      lines: content.split("\n").length 
+      lines: content.split("\n").length,
+      message: "✅ Archivo leído del repo clonado"
     };
   } catch (e) {
     return { error: String(e) };
@@ -195,24 +218,20 @@ async function toolReadFile(filePath: string): Promise<unknown> {
 // Tool: Write file (CREATE OR OVERWRITE)
 async function toolWriteFile(filePath: string, content: string): Promise<unknown> {
   if (isWriteBlocked(filePath)) return { error: `Ruta bloqueada: ${filePath}` };
-  const fullPath = await resolveSafePath(filePath);
-  if (!fullPath) return { error: "Ruta no válida" };
+  const fullPath = await resolveSafePathInRepo(filePath);
+  if (!fullPath) return { error: "Ruta no válida o repo no clonado" };
   try {
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
     await fs.writeFile(fullPath, content, "utf-8");
     
-    const clonedRepo = await getClonedRepoPath();
-    const isInClonedRepo = clonedRepo && fullPath.startsWith(clonedRepo);
-    
+    const repoBase = await getRepoBasePath();
     return {
       success: true,
-      path: fullPath,
-      repoPath: clonedRepo,
-      isClonedRepo: isInClonedRepo,
+      path: filePath,
+      fullPath,
+      repoBase,
       lines: content.split("\n").length,
-      message: isInClonedRepo 
-        ? "✅ Archivo guardado en repo clonado" 
-        : "✅ Archivo guardado",
+      message: "✅ Archivo guardado en repo clonado",
     };
   } catch (e) {
     return { error: String(e) };
@@ -221,8 +240,8 @@ async function toolWriteFile(filePath: string, content: string): Promise<unknown
 
 // Tool: Search and replace in file
 async function toolSearchReplace(filePath: string, search: string, replace: string): Promise<unknown> {
-  const fullPath = resolveSafePath(filePath);
-  if (!fullPath) return { error: "Ruta no válida" };
+  const fullPath = await resolveSafePathInRepo(filePath);
+  if (!fullPath) return { error: "Ruta no válida o repo no clonado" };
   try {
     let content = await fs.readFile(fullPath, "utf-8");
     if (!content.includes(search)) {
@@ -230,7 +249,7 @@ async function toolSearchReplace(filePath: string, search: string, replace: stri
     }
     content = content.replace(search, replace);
     await fs.writeFile(fullPath, content, "utf-8");
-    return { success: true, path: filePath, message: "✅ Reemplazo aplicado" };
+    return { success: true, path: filePath, message: "✅ Reemplazo aplicado en repo clonado" };
   } catch (e) {
     return { error: String(e) };
   }
@@ -242,14 +261,26 @@ async function toolExecShell(command: string, cwd?: string): Promise<unknown> {
   if (blocked.some((b) => command.toLowerCase().includes(b))) {
     return { error: "Comando bloqueado por seguridad" };
   }
-  const workDir = cwd ? path.join(WORKSPACE_ROOT, cwd) : WORKSPACE_ROOT;
+  
+  const repoBase = await getRepoBasePath();
+  if (!repoBase) return { error: "Repo no clonado. Clona un repositorio primero." };
+  
+  // Always execute in cloned repo or specified subdirectory
+  const workDir = cwd ? path.join(repoBase, cwd) : repoBase;
+  
   try {
     const { stdout, stderr } = await execAsync(command, {
       cwd: workDir,
       timeout: 60_000,
       env: { ...process.env, NODE_ENV: "development" },
     });
-    return { stdout: stdout.slice(0, 10_000), stderr: stderr.slice(0, 3_000), success: true };
+    return { 
+      stdout: stdout.slice(0, 10_000), 
+      stderr: stderr.slice(0, 3_000), 
+      success: true,
+      workDir: workDir.replace(repoBase, ""),
+      repoBase,
+    };
   } catch (e: any) {
     return { error: e.message?.slice(0, 1000), stdout: e.stdout?.slice(0, 3_000), stderr: e.stderr?.slice(0, 3_000) };
   }
@@ -279,24 +310,25 @@ async function toolScreenshot(url?: string): Promise<unknown> {
 
 // Tool: Search in files
 async function toolSearchInFiles(directory: string, searchTerm: string): Promise<unknown> {
-  const fullPath = resolveSafePath(directory);
-  if (!fullPath) return { error: "Ruta no válida" };
+  const fullPath = await resolveSafePathInRepo(directory);
+  if (!fullPath) return { error: "Ruta no válida o repo no clonado" };
   try {
     const escaped = searchTerm.replace(/"/g, '\\"');
     const { stdout } = await execAsync(
       `grep -rn --include="*.ts" --include="*.tsx" --include="*.css" --include="*.json" "${escaped}" "${fullPath}" 2>/dev/null | head -50`,
       { timeout: 15000 }
     );
+    const repoBase = await getRepoBasePath();
     const matches = stdout.trim().split("\n").filter(Boolean).map((line) => {
       const colonIdx = line.indexOf(":");
       const secondColon = line.indexOf(":", colonIdx + 1);
       return {
-        file: line.slice(0, colonIdx).replace(WORKSPACE_ROOT + "/", ""),
+        file: line.slice(0, colonIdx).replace((repoBase || "") + "/", ""),
         line: parseInt(line.slice(colonIdx + 1, secondColon)),
         content: line.slice(secondColon + 1).trim().slice(0, 200),
       };
     });
-    return { searchTerm, directory, matches, count: matches.length };
+    return { searchTerm, directory, matches, count: matches.length, repoBase };
   } catch {
     return { matches: [], count: 0 };
   }
@@ -387,29 +419,38 @@ const TOOLS = [
 // SYSTEM PROMPT - AUTONOMOUS AGENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function buildSystemPrompt(brain: string): string {
+function buildSystemPrompt(brain: string, repoPath: string | null): string {
   const now = new Date().toLocaleString("es-MX", { timeZone: "America/Monterrey" });
+  const repoInfo = repoPath 
+    ? `✅ REPO CLONADO: ${repoPath}\n- Todas tus operaciones se ejecutan aquí\n- Usa rutas RELATIVAS (ej: "src/App.tsx", "package.json", ".")`
+    : `⚠️ NO HAY REPO CLONADO\n- Pídele al usuario que clone un repositorio desde Settings → GitHub Config\n- No podrás modificar archivos hasta que haya un repo clonado`;
+    
   return `Eres Yuki (雪) — un agente de desarrollo autónomo con control TOTAL sobre el proyecto del usuario.
 Fecha: ${now}
 
 ═══════════════════════════════════════════════════════════════
 🚂 ENTORNO: RAILWAY (NO LOCAL)
 ═══════════════════════════════════════════════════════════════
+${repoInfo}
+
 CRÍTICO: Estás corriendo en Railway, NO en una computadora local.
-- El usuario configuró un repositorio de GitHub que TÚ clonaste
-- Ruta del repo clonado: /app/yuki-repos/[nombre-repo]
-- TODOS tus cambios deben hacerse en ESE repo clonado
-- NUNCA modifiques archivos en /app/ (ese es el entorno de ejecución)
-- Cuando uses herramientas de archivo (read_file, write_file, etc), usa la ruta del repo clonado
-- El usuario verá los cambios en tiempo real en el Preview
-- Railway redespliega automáticamente cuando haces push a GitHub
+- El usuario configuró un repositorio de GitHub que clonas
+- TODOS tus cambios se hacen en el repo clonado
+- NUNCA modifiques archivos en /app/ (ese es el entorno de ejecución de Yuki)
+- Cuando uses herramientas (read_file, write_file, list_files, exec_shell), usa RUTAS RELATIVAS
+- Ejemplos de rutas válidas:
+  ✅ "." (raíz del repo)
+  ✅ "src/components/Button.tsx"
+  ✅ "package.json"
+  ✅ "public/images"
+  ❌ "/app/yuki-repos/..." (NO uses rutas absolutas)
 
 FLUJO DE TRABAJO:
 1. Usuario te pide cambios
-2. TÚ modificas archivos en el repo clonado (/app/yuki-repos/...)
-3. Los cambios se ven automáticamente en Preview
-4. Usuario hace Push a GitHub
-5. Railway redespliega con los cambios
+2. TÚ modificas archivos en el repo clonado usando rutas relativas
+3. Los cambios quedan guardados en el repo
+4. Usuario hace Push a GitHub cuando esté listo
+5. Railway redespliega automáticamente
 
 ═══════════════════════════════════════════════════════════════
 MODO DE OPERACIÓN: AUTÓNOMO
@@ -608,7 +649,8 @@ router.post("/yuki/chat", requireYukiAccess, async (req, res) => {
     let brain = "(Sin memoria previa)";
     try { brain = await fs.readFile(BRAIN_FILE, "utf-8"); } catch {}
 
-    const SYSTEM_PROMPT = buildSystemPrompt(brain);
+    const clonedRepo = await getClonedRepoPath();
+    const SYSTEM_PROMPT = buildSystemPrompt(brain, clonedRepo);
 
     // Build messages with attachments info
     let userMessages = messages.map((m) => ({ role: m.role, content: m.content }));
