@@ -835,7 +835,21 @@ export default function Yuki() {
           <div className="yk-panel">
             <div className="yk-panel-tabs">
               <button className={`yk-tab ${activePanel === "preview" ? "yk-tab-active" : ""}`} onClick={() => setActivePanel("preview")}>
-                <Eye size={14} /><span>Preview</span>
+                <Eye size={14} />
+                <span>Preview</span>
+                {devServerRunning && (
+                  <span style={{ 
+                    marginLeft: '6px', 
+                    width: '6px', 
+                    height: '6px', 
+                    borderRadius: '50%', 
+                    background: '#22c55e',
+                    display: 'inline-block',
+                    boxShadow: '0 0 6px #22c55e',
+                    animation: 'pulse 2s ease-in-out infinite'
+                  }}></span>
+                )}
+              </button>
               </button>
               <button className={`yk-tab ${activePanel === "terminal" ? "yk-tab-active" : ""}`} onClick={() => setActivePanel("terminal")}>
                 <Terminal size={14} /><span>Terminal</span>
