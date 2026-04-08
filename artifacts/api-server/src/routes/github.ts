@@ -105,6 +105,132 @@ router.post("/github/config", requireYukiAccess, async (req, res) => {
   }
 });
 
+// ── POST /api/github/start-dev — Start dev server for cloned repo ─────────────
+router.post("/github/start-dev", requireYukiAccess, async (req, res) => {
+  try {
+    const config = await loadGitHubConfig();
+    if (!config || !config.repoUrl) {
+      res.status(400).json({ error: "No hay repositorio configurado" });
+      return;
+    }
+    
+    const repoMatch = config.repoUrl.match(/github\.com[/:]([^/]+)\/([^/.]+)/);
+    if (!repoMatch) {
+      res.status(400).json({ error: "URL de repositorio inválida" });
+      return;
+    }
+    
+    const repoName = repoMatch[2].replace(/\.git$/, "");
+    const clonePath = path.join(REPOS_DIR, repoName);
+    
+    // Check if repo is cloned
+    try {
+      await fs.access(clonePath);
+    } catch {
+      res.status(400).json({ error: "Repositorio no clonado" });
+      return;
+    }
+    
+    // Check for package.json and dev script
+    const frontendPath = path.join(clonePath, "artifacts/dtf-pliego");
+    let devCommand = "pnpm dev";
+    let workDir = frontendPath;
+    
+    try {
+      const pkgJson = JSON.parse(await fs.readFile(path.join(frontendPath, "package.json"), "utf-8"));
+      if (!pkgJson.scripts?.dev) {
+        res.status(400).json({ error: "No hay script 'dev' en package.json del frontend" });
+        return;
+      }
+    } catch {
+      // Try root package.json
+      try {
+        const rootPkg = JSON.parse(await fs.readFile(path.join(clonePath, "package.json"), "utf-8"));
+        if (rootPkg.scripts?.dev) {
+          workDir = clonePath;
+        }
+      } catch {
+        res.status(400).json({ error: "No se encontró package.json con script dev" });
+        return;
+      }
+    }
+    
+    // Kill any existing dev server on port 3001
+    try {
+      await execAsync("lsof -ti:3001 | xargs kill -9 2>/dev/null || true");
+    } catch {}
+    
+    // Install dependencies if node_modules doesn't exist
+    const nodeModulesPath = path.join(clonePath, "node_modules");
+    try {
+      await fs.access(nodeModulesPath);
+    } catch {
+      // Install dependencies
+      try {
+        await execAsync("pnpm install --no-frozen-lockfile", {
+          cwd: clonePath,
+          timeout: 180000, // 3 minutes
+        });
+      } catch (installErr: any) {
+        res.status(500).json({
+          error: "Error al instalar dependencias",
+          details: installErr.message,
+        });
+        return;
+      }
+    }
+    
+    // Start dev server in background on port 3001
+    const startCmd = `cd "${workDir}" && PORT=3001 pnpm dev > /tmp/yuki-dev.log 2>&1 &`;
+    execAsync(startCmd, { shell: true }).catch(() => {});
+    
+    // Wait a bit for server to start
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    res.json({
+      success: true,
+      message: "Dev server iniciado en puerto 3001 🚀",
+      previewUrl: "http://localhost:3001",
+      workDir,
+      logFile: "/tmp/yuki-dev.log",
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: "Error al iniciar dev server", details: err.message });
+  }
+});
+
+// ── POST /api/github/stop-dev — Stop dev server ────────────────────────────────
+router.post("/github/stop-dev", requireYukiAccess, async (req, res) => {
+  try {
+    await execAsync("lsof -ti:3001 | xargs kill -9 2>/dev/null || true");
+    res.json({ success: true, message: "Dev server detenido" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Error al detener dev server", details: err.message });
+  }
+});
+
+// ── GET /api/github/dev-status — Check if dev server is running ────────────────
+router.get("/github/dev-status", requireYukiAccess, async (req, res) => {
+  try {
+    const { stdout } = await execAsync("lsof -ti:3001 2>/dev/null || echo ''");
+    const running = stdout.trim().length > 0;
+    
+    let logs = "";
+    try {
+      logs = await fs.readFile("/tmp/yuki-dev.log", "utf-8");
+    } catch {}
+    
+    res.json({
+      running,
+      port: 3001,
+      previewUrl: running ? "http://localhost:3001" : null,
+      logs: logs.slice(-2000),
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: "Error al verificar estado", details: err.message });
+  }
+});
+
 // ── POST /api/github/push — Push changes to GitHub ─────────────────────────────
 router.post("/github/push", requireYukiAccess, async (req, res) => {
   try {

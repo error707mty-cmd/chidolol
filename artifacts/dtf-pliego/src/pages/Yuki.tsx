@@ -6,7 +6,7 @@ import {
   Eye, Trash2, Upload, Terminal, Play,
   Maximize2, Minimize2, Menu, ChevronLeft,
   Plus, Image, Paperclip, Bot, Sparkles,
-  FileCode, Cpu, Key, Zap, GitBranch, Save
+  FileCode, Cpu, Key, Zap, GitBranch, Save, Square
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -157,6 +157,8 @@ export default function Yuki() {
   const [githubConfig, setGithubConfig] = useState<{ repoUrl?: string; tokenSet?: boolean; cloned?: boolean; clonedPath?: string } | null>(null);
   const [pushing, setPushing] = useState(false);
   const [cloning, setCloning] = useState(false);
+  const [devServerRunning, setDevServerRunning] = useState(false);
+  const [startingDevServer, setStartingDevServer] = useState(false);
   const [showGithubModal, setShowGithubModal] = useState(false);
   const [githubForm, setGithubForm] = useState({ repoUrl: "", token: "" });
 
@@ -225,6 +227,16 @@ export default function Yuki() {
           clonedPath: clonedData.clonePath,
         }));
       }
+      
+      // Check dev server status
+      const devRes = await fetch(`${API_BASE}/github/dev-status`, { headers: { Authorization: `Bearer ${token}` } });
+      if (devRes.ok) {
+        const devData = await devRes.json();
+        setDevServerRunning(devData.running);
+        if (devData.running && devData.previewUrl) {
+          setPreviewUrl(devData.previewUrl);
+        }
+      }
     } catch {}
   };
 
@@ -264,6 +276,9 @@ export default function Yuki() {
         const data = await res.json();
         showToast("success", `Repositorio clonado en ${data.clonedPath} 🎉`);
         await loadGitHubConfig();
+        
+        // Auto-start dev server after cloning
+        setTimeout(() => startDevServer(), 1000);
       } else {
         const error = await res.json();
         showToast("error", error.error || "Error al clonar repositorio");
@@ -272,6 +287,51 @@ export default function Yuki() {
       showToast("error", "Error de conexión al clonar");
     }
     setCloning(false);
+  };
+
+  const startDevServer = async () => {
+    if (!githubConfig?.cloned) {
+      showToast("error", "Clona el repositorio primero");
+      return;
+    }
+    
+    setStartingDevServer(true);
+    try {
+      const res = await fetch(`${API_BASE}/github/start-dev`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setDevServerRunning(true);
+        setPreviewUrl(data.previewUrl);
+        setPreviewKey(prev => prev + 1);
+        showToast("success", "Dev server iniciado 🚀 Preview actualizado");
+      } else {
+        const error = await res.json();
+        showToast("error", error.error || "Error al iniciar dev server");
+      }
+    } catch (err) {
+      showToast("error", "Error de conexión");
+    }
+    setStartingDevServer(false);
+  };
+
+  const stopDevServer = async () => {
+    try {
+      await fetch(`${API_BASE}/github/stop-dev`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDevServerRunning(false);
+      setPreviewUrl("/");
+      setPreviewKey(prev => prev + 1);
+      showToast("success", "Dev server detenido");
+    } catch {
+      showToast("error", "Error al detener dev server");
+    }
   };
 
   const saveProvider = async () => {
@@ -577,6 +637,22 @@ export default function Yuki() {
           <button className="yk-header-btn" onClick={() => setShowGithubModal(true)} title="Config GitHub">
             <GitBranch size={16} />
           </button>
+          {githubConfig?.cloned && (
+            devServerRunning ? (
+              <button onClick={stopDevServer} className="yk-header-btn" title="Detener dev server" style={{ color: '#22c55e' }}>
+                <Square size={16} />
+              </button>
+            ) : (
+              <button 
+                onClick={startDevServer} 
+                className="yk-header-btn" 
+                disabled={startingDevServer}
+                title="Iniciar dev server"
+              >
+                {startingDevServer ? <Loader2 size={16} className="yk-spin" /> : <Play size={16} />}
+              </button>
+            )
+          )}
           <button 
             className={`yk-push-btn ${pushing ? "yk-pushing" : ""}`} 
             onClick={pushToGitHub}
