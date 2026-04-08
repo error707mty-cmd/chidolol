@@ -7,6 +7,7 @@ import adminRouter from "./admin";
 import stripeRouter from "./stripe";
 import chatRouter from "./chat";
 import yukiRouter from "./yuki";
+import githubRouter from "./github";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(adminRouter);
 router.use(stripeRouter);
 router.use(chatRouter);
 router.use(yukiRouter);
+router.use(githubRouter);
 
 export default router;

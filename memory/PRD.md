@@ -1,55 +1,55 @@
 # ERROR707 Studio - PRD
 
 ## Original Problem Statement
-1. Integrar Yuki como IA principal con DeepSeek Coder
-2. Dar control total de la aplicación a Yuki
-3. Acceso exclusivo para error707mty en /yuki
-4. Eliminar todas las referencias a Horo
+1. Crear Yuki IDE con preview en tiempo real
+2. Push a GitHub con un click
+3. Poder modificar repo y token cuando quiera
+4. Interfaz simple siguiendo la línea de diseño
 
 ## Architecture
 - **Frontend**: React + Vite + TypeScript + Wouter
 - **Backend**: Node.js + Express + PostgreSQL (Drizzle ORM)
-- **AI**: DeepSeek Coder API (reemplazó OpenAI)
+- **AI**: DeepSeek Coder API
+- **VCS**: Git + GitHub API
 
 ## What's Been Implemented (April 8, 2026)
 
-### Yuki AI - Migración Completa
-- ✅ Reemplazada API de OpenAI por DeepSeek Coder en todos los endpoints:
-  - `/api/chat` (público)
-  - `/api/admin/chat` (admin streaming)
-  - `/api/admin/chat-job` (admin background jobs)
-  - `/api/admin/chat-casual` (casual streaming)
-  - `/api/yuki/chat` (exclusivo)
-- ✅ Renombrado todas las referencias de "Horo" a "Yuki"
-- ✅ Actualizado ChatAI.tsx - ahora muestra Yuki con DeepSeek Coder
-- ✅ Actualizado AdminAsistente.tsx - ahora muestra Yuki
-- ✅ Página exclusiva /yuki con UI personalizada (acceso solo error707mty)
-- ✅ System prompts actualizados con personalidad de Yuki
-- ✅ Brain file cambiado de error-brain.md a yuki-brain.md
+### Yuki IDE - Interfaz Completa
+- ✅ Layout estilo IDE: Chat izquierda + Preview derecha
+- ✅ Preview en tiempo real con iframe de la app
+- ✅ Botón Push para subir cambios a GitHub
+- ✅ Modal de configuración GitHub (repo URL + token)
+- ✅ Indicadores de git: branch actual, número de cambios
+- ✅ Botón refrescar preview
+- ✅ Auto-refresh del preview después de cambios de Yuki
+- ✅ Diseño consistente con tema purple/violet
 
-### Files Modified
-- `/app/artifacts/api-server/src/routes/chat.ts` - DeepSeek + Yuki
-- `/app/artifacts/api-server/src/routes/admin/chat.ts` - DeepSeek + Yuki
-- `/app/artifacts/api-server/src/routes/yuki.ts` - Endpoint exclusivo
-- `/app/artifacts/dtf-pliego/src/pages/ChatAI.tsx` - UI Yuki
-- `/app/artifacts/dtf-pliego/src/pages/AdminAsistente.tsx` - UI Yuki
-- `/app/artifacts/dtf-pliego/src/pages/Yuki.tsx` - Página exclusiva
-- `/app/artifacts/dtf-pliego/src/App.tsx` - Ruta /yuki
-- `/app/artifacts/dtf-pliego/src/index.css` - Estilos Yuki
+### GitHub Integration
+- ✅ Endpoint GET /api/github/config - Obtener configuración
+- ✅ Endpoint POST /api/github/config - Guardar configuración
+- ✅ Endpoint POST /api/github/push - Push a GitHub
+- ✅ Endpoint GET /api/github/status - Estado de git
+- ✅ Configuración persistente en .github-config.json
+- ✅ Acceso exclusivo para error707mty
+
+### Files Created/Modified
+- `/app/artifacts/api-server/src/routes/github.ts` - Backend GitHub
+- `/app/artifacts/dtf-pliego/src/pages/Yuki.tsx` - Nueva interfaz IDE
+- `/app/artifacts/dtf-pliego/src/index.css` - Estilos IDE
+- `/app/artifacts/api-server/.github-config.json` - Config GitHub
 
 ## User Credentials
 - **Admin**: error707mty / buentello0607
 
-## DeepSeek API
-- **Key**: sk-b26b3f46130348688e5eac9cc3d99513
-- **Model**: deepseek-coder
-- **Endpoint**: https://api.deepseek.com
-
-## Backlog / Future
-- P1: Historial de conversaciones persistente para Yuki
-- P2: Dashboard de actividad de Yuki
-- P3: Más herramientas especializadas
+## GitHub Config
+- **Repo**: https://github.com/error707mty-cmd/chidolol
+- **Token**: Configurado (github_pat_...Fv3A)
 
 ## Next Tasks
-- Probar todas las funcionalidades de Yuki
-- Crear memoria inicial (yuki-brain.md)
+- Probar push a GitHub
+- Probar modificaciones en tiempo real con Yuki
+
+## Backlog
+- P1: Historial de commits en el IDE
+- P2: Diff viewer antes de push
+- P3: Branch selector
