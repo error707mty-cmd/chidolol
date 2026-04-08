@@ -1,0 +1,60 @@
+{
+  "summary": "Comprehensive testing of Yuki IDE dev server preview functionality. All backend APIs (13/13 tests passed) and frontend UI flows working correctly. Start/Stop dev server buttons, preview iframe switching between / and localhost:3001, GitHub config modal with cloned repo status all functional.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Yuki IDE Header",
+        "issues": ["Missing 'Preview Live' indicator when dev server is running - requirement states there should be a visual indicator but only toast notification is shown"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_dev_server_api.py",
+    "/app/test_reports/pytest/pytest_dev_server_results.xml"
+  ],
+  "action_items": [
+    "Add persistent 'Preview Live' indicator in header or preview panel when devServerRunning is true (currently only shows toast notification)"
+  ],
+  "critical_code_review_comments": [
+    "Yuki.tsx line 160: devServerRunning state is properly managed but no visual indicator is shown in the UI when server is running",
+    "github.ts line 184: Dev server start command uses PORT=3001 which is correct for the cloned repo preview",
+    "Yuki.tsx line 309: previewUrl is correctly set to localhost:3001 when dev server starts"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_dev_server_api.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 tests passed)",
+    "frontend": "100% (all UI flows working)"
+  },
+  "test_credentials": {
+    "admin": {
+      "username": "error707mty",
+      "password": "buentello0607"
+    }
+  },
+  "seed_data_creation": "Cloned repo already exists at /app/yuki-repos/chidolol with dependencies installed",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All dev server features tested and working: (1) Start button visible when repo cloned and dev server not running, (2) Clicking Start initiates dev server on port 3001, (3) Stop button appears when dev server running, (4) Preview iframe src changes to http://localhost:3001 when started, (5) Preview iframe src reverts to / when stopped, (6) Toast notifications show success messages, (7) GitHub modal shows 'Token configurado' and 'Repo clonado' status. Missing feature: No persistent 'Preview Live' indicator in UI.",
+  "features_tested": {
+    "dev_server_start_api": "✅ Working - POST /api/github/start-dev returns success with previewUrl",
+    "dev_server_stop_api": "✅ Working - POST /api/github/stop-dev stops server on port 3001",
+    "dev_server_status_api": "✅ Working - GET /api/github/dev-status returns running state and previewUrl",
+    "cloned_repo_api": "✅ Working - GET /api/github/cloned-repo shows cloned=true for chidolol",
+    "start_button_ui": "✅ Working - Play button visible when repo cloned, hidden when server running",
+    "stop_button_ui": "✅ Working - Square button visible when server running, hidden when stopped",
+    "preview_iframe_start": "✅ Working - iframe src changes to http://localhost:3001 when dev server starts",
+    "preview_iframe_stop": "✅ Working - iframe src reverts to / when dev server stops",
+    "toast_notifications": "✅ Working - Shows 'Dev server iniciado' and 'Dev server detenido' messages",
+    "github_modal_status": "✅ Working - Shows 'Token configurado ✓' and 'Repo clonado ✓'",
+    "access_control": "✅ Working - All dev server endpoints require authentication",
+    "preview_live_indicator": "⚠️ Missing - No persistent visual indicator when dev server is running"
+  }
+}
