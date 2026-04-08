@@ -5851,3 +5851,589 @@ input[type="number"] {
     max-width: 94%;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   YUKI - Exclusive AI Assistant Styles
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.yuki-root {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: linear-gradient(135deg, #0a0a0f 0%, #12121a 50%, #0d0d14 100%);
+  color: #e0e0e0;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* ── Header ── */
+.yuki-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: rgba(10, 10, 15, 0.9);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+  backdrop-filter: blur(12px);
+}
+
+.yuki-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.yuki-logo-icon {
+  font-size: 24px;
+  color: #a78bfa;
+  font-weight: 700;
+}
+
+.yuki-logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.5px;
+}
+
+.yuki-logo-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 8px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+  color: white;
+  border-radius: 20px;
+  letter-spacing: 1px;
+}
+
+.yuki-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.yuki-nav button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 8px;
+  color: #888;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.yuki-nav button:hover,
+.yuki-nav button.active {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #a78bfa;
+}
+
+/* ── Main Layout ── */
+.yuki-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.yuki-sidebar {
+  width: 280px;
+  background: rgba(15, 15, 20, 0.8);
+  border-right: 1px solid rgba(139, 92, 246, 0.1);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px;
+  overflow-y: auto;
+}
+
+.yuki-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+  margin-bottom: 20px;
+}
+
+.yuki-avatar {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+}
+
+.yuki-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.yuki-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #888;
+}
+
+.yuki-status-dot {
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.yuki-sidebar-section {
+  margin-bottom: 20px;
+}
+
+.yuki-sidebar-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.yuki-capability {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.yuki-capability-icon {
+  font-size: 14px;
+}
+
+.yuki-capability-check {
+  margin-left: auto;
+  color: #22c55e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.yuki-info-card {
+  background: rgba(139, 92, 246, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.1);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.yuki-info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.05);
+}
+
+.yuki-info-row:last-child {
+  border-bottom: none;
+}
+
+.yuki-info-row span:first-child {
+  color: #888;
+}
+
+.yuki-info-row span:last-child {
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+.yuki-clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 10px;
+  color: rgba(248, 113, 113, 0.8);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.yuki-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+/* ── Chat Panel ── */
+.yuki-chat-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.yuki-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 10, 15, 0.5);
+}
+
+.yuki-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: rgba(139, 92, 246, 0.05);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+  font-size: 13px;
+  font-weight: 600;
+  color: #a78bfa;
+}
+
+.yuki-chat-header-sub {
+  font-weight: 400;
+  color: #666;
+  font-size: 12px;
+}
+
+.yuki-cancel-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
+  color: #f87171;
+  font-size: 11px;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+/* ── Messages ── */
+.yuki-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.yuki-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: #666;
+}
+
+.yuki-empty-avatar {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  color: white;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 40px rgba(139, 92, 246, 0.4);
+}
+
+.yuki-empty h3 {
+  font-size: 20px;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.yuki-empty p {
+  max-width: 400px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.yuki-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.yuki-suggestions button {
+  padding: 10px 18px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 20px;
+  color: #a78bfa;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.yuki-suggestions button:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.yuki-message {
+  max-width: 85%;
+}
+
+.yuki-message--user {
+  align-self: flex-end;
+}
+
+.yuki-message--assistant {
+  align-self: flex-start;
+}
+
+.yuki-message-content {
+  padding: 14px 18px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.yuki-message--user .yuki-message-content {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.yuki-message--assistant .yuki-message-content {
+  background: rgba(30, 30, 40, 0.8);
+  color: #e0e0e0;
+  border: 1px solid rgba(139, 92, 246, 0.1);
+  border-bottom-left-radius: 4px;
+}
+
+.yuki-thinking {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: rgba(30, 30, 40, 0.8);
+  border: 1px solid rgba(139, 92, 246, 0.1);
+  border-radius: 16px;
+  color: #888;
+  font-size: 13px;
+}
+
+.yuki-tool-calls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.yuki-tool-call {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.yuki-tool-name {
+  color: #a78bfa;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Input ── */
+.yuki-input-area {
+  padding: 16px 20px 20px;
+  background: rgba(15, 15, 20, 0.9);
+  border-top: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.yuki-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  background: rgba(30, 30, 40, 0.6);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 16px;
+  padding: 12px 12px 12px 18px;
+  transition: border-color 0.2s;
+}
+
+.yuki-input-row:focus-within {
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+}
+
+.yuki-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e0e0e0;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  min-height: 24px;
+  max-height: 180px;
+}
+
+.yuki-input::placeholder {
+  color: #555;
+}
+
+.yuki-send-btn {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.yuki-send-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+}
+
+.yuki-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Access Denied ── */
+.yuki-denied {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100dvh;
+  background: linear-gradient(135deg, #0a0a0f 0%, #12121a 100%);
+}
+
+.yuki-denied-card {
+  text-align: center;
+  padding: 48px;
+  background: rgba(15, 15, 20, 0.8);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 24px;
+  max-width: 400px;
+}
+
+.yuki-denied-icon {
+  color: #8b5cf6;
+  margin-bottom: 20px;
+}
+
+.yuki-denied-card h2 {
+  font-size: 24px;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.yuki-denied-card p {
+  color: #888;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.yuki-denied-btn {
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.yuki-denied-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+}
+
+.yuki-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100dvh;
+  background: linear-gradient(135deg, #0a0a0f 0%, #12121a 100%);
+  color: #888;
+  gap: 16px;
+}
+
+/* ── Code blocks in Yuki ── */
+.yuki-message-content pre {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 10px;
+  padding: 14px;
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+.yuki-message-content code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 13px;
+}
+
+.yuki-message-content p code {
+  background: rgba(139, 92, 246, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #c4b5fd;
+}
+
+/* ── Mobile Responsive ── */
+@media (max-width: 768px) {
+  .yuki-sidebar {
+    display: none;
+  }
+  
+  .yuki-header {
+    padding: 10px 16px;
+  }
+  
+  .yuki-logo-badge {
+    display: none;
+  }
+  
+  .yuki-messages {
+    padding: 16px;
+  }
+  
+  .yuki-message {
+    max-width: 95%;
+  }
+  
+  .yuki-input-area {
+    padding: 12px 16px 16px;
+  }
+}

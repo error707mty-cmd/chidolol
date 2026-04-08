@@ -6,6 +6,7 @@ import authRouter from "./auth";
 import adminRouter from "./admin";
 import stripeRouter from "./stripe";
 import chatRouter from "./chat";
+import yukiRouter from "./yuki";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(pliegosRouter);
 router.use(adminRouter);
 router.use(stripeRouter);
 router.use(chatRouter);
+router.use(yukiRouter);
 
 export default router;

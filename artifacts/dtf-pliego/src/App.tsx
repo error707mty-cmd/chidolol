@@ -16,6 +16,7 @@ import AdminAsistente from "@/pages/AdminAsistente";
 import Profile from "@/pages/Profile";
 import Billing from "@/pages/Billing";
 import ChatAI from "@/pages/ChatAI";
+import Yuki from "@/pages/Yuki";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 
 function makeQueryClient() {
@@ -61,6 +62,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/chat-ia" component={ChatAI} />
+      <Route path="/yuki" component={Yuki} />
 
       {/* Auth-required routes */}
       <Route>
