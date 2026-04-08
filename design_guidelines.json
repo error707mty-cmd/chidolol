@@ -1,83 +1,102 @@
 {
   "theme": "dark",
-  "archetype": "Archetype 2: The Performance Pro (Dark Mode Variant)",
-  "emotional_tone": "Technical, precise, elite, focused, authoritative",
+  "archetype": "Swiss & High-Contrast",
+  "domain": "SaaS / Developer Tool",
+  "typography": {
+    "headings": {
+      "fontFamily": "Outfit, system-ui, sans-serif",
+      "weights": ["400", "500", "600"],
+      "letterSpacing": "tracking-tight"
+    },
+    "body": {
+      "fontFamily": "IBM Plex Sans, system-ui, sans-serif",
+      "weights": ["400", "500"]
+    },
+    "code": {
+      "fontFamily": "IBM Plex Mono, monospace",
+      "weights": ["400"]
+    }
+  },
   "colors": {
     "background": {
-      "base": "#0A0A0A",
-      "surface": "#121212",
-      "surface_elevated": "#1A1A1A"
+      "default": "#000000",
+      "surface": "#0a0a0a",
+      "panel": "#171717"
+    },
+    "borders": {
+      "default": "#262626",
+      "subtle": "#171717",
+      "focus": "#3b82f6"
     },
     "text": {
-      "primary": "#FFFFFF",
-      "secondary": "#A1A1AA",
-      "muted": "#71717A"
+      "primary": "#fafafa",
+      "secondary": "#a1a1aa",
+      "muted": "#71717a"
     },
-    "brand": {
-      "primary": "#FF3B30",
-      "primary_hover": "#D63028",
-      "accent": "#FF453A"
-    },
-    "ui": {
-      "border": "#27272A",
-      "border_hover": "#3F3F46",
-      "success": "#34C759",
-      "warning": "#FFCC00"
+    "accent": {
+      "primary": "#fafafa",
+      "primaryForeground": "#000000",
+      "brand": "#3b82f6"
     }
   },
-  "typography": {
-    "headings_font": "Cabinet Grotesk",
-    "body_font": "Inter",
-    "mono_font": "JetBrains Mono",
-    "rules": {
-      "h1": "text-4xl font-bold tracking-tighter text-white",
-      "h2": "text-2xl font-bold tracking-tight text-white",
-      "h3": "text-lg font-semibold tracking-tight text-white",
-      "body": "text-sm text-zinc-400 leading-relaxed",
-      "code": "font-mono text-xs text-zinc-300 leading-normal",
-      "label": "text-xs font-semibold tracking-widest uppercase text-zinc-500"
-    }
-  },
-  "layout": {
-    "structure": "Split-pane IDE layout. Left pane for Yuki Chat (w-80 or col-span-3), Right pane for Code/Preview/Terminal (flex-1 or col-span-9).",
-    "spacing": "Dense, functional spacing (Control Room Grid). gap-4, p-4, p-6. No wasted space.",
-    "containers": "Use flat backgrounds with 1px solid #27272A borders. Avoid soft shadows. Use sharp or slightly rounded corners (rounded-sm or rounded-none)."
+  "spacing_and_layout": {
+    "philosophy": "Minimalist IDE approach. Dense but highly structured, similar to Linear or Vercel.",
+    "grid": "Control Room Grid (Dense, functional, no empty useless spaces).",
+    "gaps": "gap-4 for major panels, gap-2 for inner items.",
+    "paddings": "p-4 or p-6 for major panels, p-2 or p-3 for inner cards.",
+    "radii": "rounded-md (6px) for panels, rounded-sm (4px) for inner elements. Avoid pill shapes (rounded-full) for main UI elements.",
+    "borders": "1px solid #262626 everywhere. No gradients, no soft shadows.",
+    "shadows": "None. Use 1px borders for separation instead of shadows to keep it flat and minimal."
   },
   "components": {
-    "buttons": "Flat, sharp edges. Primary button uses bg-[#FF3B30] text-white hover:bg-[#D63028]. Secondary uses bg-[#1A1A1A] border border-[#27272A] hover:border-[#3F3F46].",
-    "inputs": "bg-[#0A0A0A] border border-[#27272A] focus:border-[#FF3B30] focus:ring-1 focus:ring-[#FF3B30] text-white rounded-sm.",
-    "tabs": "Minimalist tabs. Remove default Shadcn grey background. Active tab should have text-white and a border-b-2 border-[#FF3B30]. Inactive tabs text-zinc-500 hover:text-zinc-300.",
-    "chat_bubbles": "Yuki (AI): bg-[#121212] border border-[#27272A] p-4 rounded-sm. User: bg-transparent border border-transparent p-4 text-right.",
-    "terminal": "bg-[#050505] text-[#A1A1AA] font-mono text-xs p-4 rounded-sm border border-[#27272A] overflow-y-auto."
-  },
-  "micro_themes": [
-    "Grid Borders (The Technical Look): Use border-collapse and exposed grid lines for the main layout separating the chat, preview, and terminal areas to give it a robust, developer-first feel."
-  ],
-  "motion": {
-    "general": "Minimal and snappy. No bouncy animations.",
-    "hover": "Subtle border color changes or background lightness changes (transition-colors duration-200).",
-    "tabs": "Instant switch or very fast crossfade (150ms)."
-  },
-  "media": {
-    "image_urls": {
-      "yuki_avatar": {
-        "url": "https://images.unsplash.com/photo-1698729325349-bd930df34217?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwzfHxuZW9uJTIwYXZhdGFyfGVufDB8fHxyZWR8MTc3NTY4Mjk0NHww&ixlib=rb-4.1.0&q=85",
-        "description": "Abstract red neon art used as the avatar for the AI 'Yuki' in the chat interface.",
-        "category": "avatar"
-      },
-      "terminal_bg": {
-        "url": "https://images.unsplash.com/photo-1595623654300-b27329804025?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwxfHxjb2RpbmclMjB0ZXJtaW5hbCUyMGNvZGV8ZW58MHx8fGJsYWNrfDE3NzU2ODI5NDR8MA&ixlib=rb-4.1.0&q=85",
-        "description": "Dark screen coding texture for any empty states in the IDE or Terminal tabs.",
-        "category": "background"
-      }
+    "chat_interface": {
+      "style": "Clean message bubbles. No colored backgrounds for user vs bot, use subtle background differences (e.g., transparent vs #171717) and 1px borders. Left aligned.",
+      "input": "Flat textarea, 1px border (#262626), ring-0 focus. Submit button inside input.",
+      "spacing": "p-4 or p-6"
+    },
+    "live_preview": {
+      "style": "Full height panel. Top header bar with URL/Refresh separated by 1px bottom border. Iframe below.",
+      "border": "border-l or border-x #262626"
+    },
+    "terminal_tab": {
+      "style": "Monospace font. Absolute bottom panel or bottom tab. Darkest background (#000000).",
+      "text": "text-sm text-zinc-300"
+    },
+    "modals": {
+      "style": "Flat panel. bg-black/80 backdrop-blur-xl for overlay. Modal itself should be solid #0a0a0a with 1px border #262626.",
+      "backdrop": "bg-black/80 backdrop-blur-sm"
+    },
+    "buttons": {
+      "primary": "bg-zinc-50 text-black hover:bg-zinc-200. Flat, no shadow.",
+      "secondary": "bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800",
+      "icon": "text-zinc-400 hover:text-zinc-50 hover:bg-zinc-900",
+      "ghost": "hover:bg-zinc-900 hover:text-zinc-50"
     }
   },
+  "motion": {
+    "philosophy": "Instant feedback, very fast transitions (150ms). No excessive animations.",
+    "hover": "Subtle background color change or text color change. No scaling (no hover:scale).",
+    "modals": "Fade in, scale from 98% to 100% fast (150ms)."
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "stroke-width: 1.5. Clean, professional."
+  },
+  "images": {
+    "philosophy": "As an IDE tool, minimal to no images are needed. Rely on icons and typography.",
+    "image_urls": {}
+  },
+  "testing": {
+    "attributes": "All interactive and key informational elements MUST include a data-testid attribute in kebab-case."
+  },
   "instructions_to_main_agent": [
-    "Install fonts: 'Cabinet Grotesk' (via @fontsource or local) or fallback to system sans-serif for headings, and 'JetBrains Mono' for code blocks.",
-    "Layout Setup: Implement a strict 'Control Room Grid' h-screen layout. Left panel for the Chat interface, Right panel with tabs for Preview/Terminal.",
-    "CRITICAL PREVIEW FIX FOR RAILWAY: The Live Preview iframe currently fails because `window.location.origin` inside Railway doesn't route correctly to the dev server port dynamically. Fix this by checking the environment: if the app is serving the preview from the same host, use a relative URL `src='/'` or `src='/preview'`. Alternatively, use `import.meta.env.VITE_PREVIEW_URL || '/'`. Avoid hardcoding origin. If Railway serves the backend as an API and frontend separately, use an explicit environment variable that Railway injects. The safest fallback for in-app preview without port collision is fetching the raw HTML via API and injecting it using `srcDoc={htmlContent}` in the iframe.",
-    "Apply 'Grid Borders' style: Ensure the panes (sidebar, main content) are separated by 1px solid borders (`border-zinc-800`) without rounding the outer layout to feel like a real IDE.",
-    "Customize the Shadcn Tabs component to look like VSCode/IDE tabs: flat, top-aligned, active state denoted by text color and an accent line, not a segmented control pill.",
-    "Add 'data-testid' to all interactive elements, e.g., 'yuki-chat-input', 'preview-tab', 'terminal-tab', 'github-push-btn'."
+    "Refactor .js and UI components to remove all 'glow', 'shadow-xl', gradients, and highly saturated colors.",
+    "Implement a pure flat minimalist style: #000000 backgrounds, #171717 panels, 1px #262626 borders.",
+    "Remove excess decorations. Ensure high contrast typography (white text on black/dark grey).",
+    "Ensure 'Live Preview', 'Terminal', 'Chat Interface' follow a structured pane layout (using flex or react-resizable-panels) with clear 1px borders dividing them.",
+    "Add 'data-testid' to all interactive elements to facilitate robust automated testing.",
+    "For components, heavily use Shadcn (customized to have no rounding or shadows, strictly flat with borders).",
+    "No purple (#9D4CDD) or teal (#1B93A4) anywhere. Keep colors muted except for a single focus/accent color if strictly necessary.",
+    "Ensure generous spacing inside containers, but maintain tight functional grids for tools."
   ]
 }
