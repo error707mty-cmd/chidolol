@@ -3,10 +3,12 @@ import jwt from "jsonwebtoken";
 import { db, pool as rawPool, usersTable, pliegosTable, uploadsTable } from "@workspace/db";
 import { eq, count, desc, sql } from "drizzle-orm";
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs/promises";
 import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
+import multer from "multer";
 
 const execAsync = promisify(exec);
 const router = Router();
@@ -14,18 +16,98 @@ const router = Router();
 const JWT_SECRET = process.env["JWT_SECRET"];
 if (!JWT_SECRET) throw new Error("JWT_SECRET env var is required");
 
-// DeepSeek API Configuration
-const DEEPSEEK_API_KEY = process.env["DEEPSEEK_API_KEY"] ?? "";
-const deepseek = new OpenAI({
-  apiKey: DEEPSEEK_API_KEY,
-  baseURL: "https://api.deepseek.com",
-});
-
 const WORKSPACE_ROOT = path.resolve("/app");
+const CONFIG_FILE = path.join(WORKSPACE_ROOT, "artifacts/api-server/.yuki-config.json");
 const BRAIN_FILE = path.join(WORKSPACE_ROOT, "artifacts/api-server/yuki-brain.md");
+const UPLOADS_DIR = path.join(WORKSPACE_ROOT, "artifacts/api-server/yuki-uploads");
 
-// ── Path helpers ───────────────────────────────────────────────────────────────
+// Ensure uploads directory exists
+fs.mkdir(UPLOADS_DIR, { recursive: true }).catch(() => {});
 
+// Multer config for file uploads
+const storage = multer.diskStorage({
+  destination: UPLOADS_DIR,
+  filename: (_req, file, cb) => {
+    const uniqueName = `${Date.now()}-${file.originalname}`;
+    cb(null, uniqueName);
+  },
+});
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB limit
+
+// ── Types ──────────────────────────────────────────────────────────────────────
+
+interface AIProvider {
+  id: string;
+  name: string;
+  model: string;
+  apiKey: string;
+  baseUrl?: string;
+}
+
+interface YukiConfig {
+  providers: AIProvider[];
+  activeProviderId: string;
+  lastUpdated: string;
+}
+
+// ── Config Management ──────────────────────────────────────────────────────────
+
+async function loadConfig(): Promise<YukiConfig> {
+  try {
+    const content = await fs.readFile(CONFIG_FILE, "utf-8");
+    return JSON.parse(content);
+  } catch {
+    // Default config with DeepSeek
+    const defaultConfig: YukiConfig = {
+      providers: [
+        {
+          id: "deepseek-default",
+          name: "DeepSeek Coder",
+          model: "deepseek-coder",
+          apiKey: process.env["DEEPSEEK_API_KEY"] || "",
+          baseUrl: "https://api.deepseek.com",
+        },
+      ],
+      activeProviderId: "deepseek-default",
+      lastUpdated: new Date().toISOString(),
+    };
+    await saveConfig(defaultConfig);
+    return defaultConfig;
+  }
+}
+
+async function saveConfig(config: YukiConfig): Promise<void> {
+  config.lastUpdated = new Date().toISOString();
+  await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), "utf-8");
+}
+
+// ── Access Control ─────────────────────────────────────────────────────────────
+
+function requireYukiAccess(
+  req: import("express").Request,
+  res: import("express").Response,
+  next: import("express").NextFunction
+) {
+  const token = req.headers["authorization"]?.slice(7) ?? null;
+  if (!token) { res.status(401).json({ error: "No autenticado" }); return; }
+  try {
+    const p = jwt.verify(token, JWT_SECRET!) as { userId: number; username: string; isAdmin: boolean };
+    if (p.username !== "error707mty") {
+      res.status(403).json({ error: "Acceso exclusivo" });
+      return;
+    }
+    (req as any).yukiUser = p;
+    next();
+  } catch {
+    res.status(401).json({ error: "Token inválido" });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TOOL IMPLEMENTATIONS - FULL AUTONOMOUS CONTROL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Path helpers
 function resolveSafePath(relativePath: string): string | null {
   const normalized = path.normalize(relativePath).replace(/^\/+/, "");
   if (normalized.includes("..")) return null;
@@ -39,94 +121,13 @@ function isWriteBlocked(relativePath: string): boolean {
   return BLOCKED_WRITE.some((b) => relativePath.includes(b));
 }
 
-// ── YUKI EXCLUSIVE ACCESS - Solo error707mty ───────────────────────────────────
-
-function requireYukiAccess(
-  req: import("express").Request,
-  res: import("express").Response,
-  next: import("express").NextFunction
-) {
-  const token = req.headers["authorization"]?.slice(7) ?? null;
-  if (!token) { res.status(401).json({ error: "No autenticado" }); return; }
-  try {
-    const p = jwt.verify(token, JWT_SECRET!) as { userId: number; username: string; isAdmin: boolean };
-    // Solo error707mty puede acceder a Yuki
-    if (p.username !== "error707mty") {
-      res.status(403).json({ error: "Acceso exclusivo — solo el creador puede usar a Yuki 🌸" });
-      return;
-    }
-    (req as any).yukiUser = p;
-    next();
-  } catch {
-    res.status(401).json({ error: "Token inválido" });
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TOOL IMPLEMENTATIONS - FULL CONTROL
-// ═══════════════════════════════════════════════════════════════════════════════
-
-async function toolListUsers() {
-  return db.select({
-    id: usersTable.id, username: usersTable.username, email: usersTable.email,
-    displayName: usersTable.displayName, isAdmin: usersTable.isAdmin,
-    isActive: usersTable.isActive, plan: usersTable.plan, createdAt: usersTable.createdAt,
-  }).from(usersTable).orderBy(desc(usersTable.createdAt)).limit(100);
-}
-
-async function toolGetAppStats() {
-  const [users] = await db.select({ count: count() }).from(usersTable);
-  const [pliegos] = await db.select({ count: count() }).from(pliegosTable);
-  const [uploads] = await db.select({ count: count() }).from(uploadsTable);
-  const [pro] = await db.select({ count: count() }).from(usersTable).where(eq(usersTable.plan, "pro"));
-  const [admins] = await db.select({ count: count() }).from(usersTable).where(eq(usersTable.isAdmin, true));
-  const [active] = await db.select({ count: count() }).from(usersTable).where(eq(usersTable.isActive, true));
-  const [storage] = await db.select({
-    totalBytes: sql<number>`COALESCE(SUM(size_bytes), 0)`.mapWith(Number)
-  }).from(uploadsTable);
-  return {
-    totalUsers: users.count, activeUsers: active.count, adminUsers: admins.count,
-    proUsers: pro.count, totalPliegos: pliegos.count, totalUploads: uploads.count,
-    totalStorageGB: ((storage.totalBytes ?? 0) / 1e9).toFixed(2),
-  };
-}
-
-async function toolUpdateUser(userId: number, updates: { isAdmin?: boolean; isActive?: boolean; plan?: string }) {
-  const allowed: Record<string, unknown> = {};
-  if (updates.isAdmin !== undefined) allowed.isAdmin = updates.isAdmin;
-  if (updates.isActive !== undefined) allowed.isActive = updates.isActive;
-  if (updates.plan !== undefined) allowed.plan = updates.plan;
-  if (!Object.keys(allowed).length) return { error: "Sin campos válidos" };
-  const [u] = await db.update(usersTable).set(allowed as any).where(eq(usersTable.id, userId)).returning({
-    id: usersTable.id, username: usersTable.username, isAdmin: usersTable.isAdmin,
-    isActive: usersTable.isActive, plan: usersTable.plan,
-  });
-  return u ?? { error: "Usuario no encontrado" };
-}
-
-async function toolExecuteSql(query: string, params?: unknown[]): Promise<unknown> {
-  const client = await rawPool.connect();
-  try {
-    const result = await client.query(query, params as any[]);
-    return {
-      command: result.command,
-      rowCount: result.rowCount,
-      rows: result.rows.slice(0, 200),
-      fields: result.fields?.map((f) => ({ name: f.name, dataTypeID: f.dataTypeID })),
-    };
-  } catch (e: any) {
-    return { error: e.message, detail: e.detail, hint: e.hint };
-  } finally {
-    client.release();
-  }
-}
-
+// Tool: List files
 async function toolListFiles(directory: string): Promise<unknown> {
   const fullPath = resolveSafePath(directory);
   if (!fullPath) return { error: "Ruta no válida" };
   try {
     const entries = await fs.readdir(fullPath, { withFileTypes: true });
-    return entries.map((e) => ({
+    return entries.slice(0, 100).map((e) => ({
       name: e.name,
       type: e.isDirectory() ? "directory" : "file",
       path: path.join(directory, e.name).replace(/\\/g, "/"),
@@ -136,19 +137,21 @@ async function toolListFiles(directory: string): Promise<unknown> {
   }
 }
 
+// Tool: Read file
 async function toolReadFile(filePath: string): Promise<unknown> {
   const fullPath = resolveSafePath(filePath);
   if (!fullPath) return { error: "Ruta no válida" };
   try {
     const stat = await fs.stat(fullPath);
-    if (stat.size > 500_000) return { error: "Archivo >500KB. Usa grep_file para buscar secciones específicas." };
+    if (stat.size > 500_000) return { error: "Archivo >500KB" };
     const content = await fs.readFile(fullPath, "utf-8");
-    return { path: filePath, content, lines: content.split("\n").length, sizeBytes: stat.size };
+    return { path: filePath, content, lines: content.split("\n").length };
   } catch (e) {
     return { error: String(e) };
   }
 }
 
+// Tool: Write file (CREATE OR OVERWRITE)
 async function toolWriteFile(filePath: string, content: string): Promise<unknown> {
   if (isWriteBlocked(filePath)) return { error: `Ruta bloqueada: ${filePath}` };
   const fullPath = resolveSafePath(filePath);
@@ -156,523 +159,363 @@ async function toolWriteFile(filePath: string, content: string): Promise<unknown
   try {
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
     await fs.writeFile(fullPath, content, "utf-8");
-    const isFrontend = filePath.includes("artifacts/dtf-pliego/src");
+    const isFrontend = filePath.includes("dtf-pliego/src");
     return {
-      success: true, path: filePath, lines: content.split("\n").length,
-      note: isFrontend
-        ? "✅ Cambio aplicado — Vite detectará el hot-reload automáticamente"
-        : "✅ Archivo guardado — Los cambios en el backend requieren reiniciar el servidor",
+      success: true,
+      path: filePath,
+      lines: content.split("\n").length,
+      hotReload: isFrontend,
+      message: isFrontend ? "✅ Cambio aplicado — Hot reload activo" : "✅ Archivo guardado",
     };
   } catch (e) {
     return { error: String(e) };
   }
 }
 
+// Tool: Search and replace in file
+async function toolSearchReplace(filePath: string, search: string, replace: string): Promise<unknown> {
+  const fullPath = resolveSafePath(filePath);
+  if (!fullPath) return { error: "Ruta no válida" };
+  try {
+    let content = await fs.readFile(fullPath, "utf-8");
+    if (!content.includes(search)) {
+      return { error: "Texto no encontrado en el archivo", search: search.slice(0, 100) };
+    }
+    content = content.replace(search, replace);
+    await fs.writeFile(fullPath, content, "utf-8");
+    return { success: true, path: filePath, message: "✅ Reemplazo aplicado" };
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
+// Tool: Execute shell command
+async function toolExecShell(command: string, cwd?: string): Promise<unknown> {
+  const blocked = ["rm -rf /", "rm -rf ~", "mkfs", "shutdown", "reboot"];
+  if (blocked.some((b) => command.toLowerCase().includes(b))) {
+    return { error: "Comando bloqueado por seguridad" };
+  }
+  const workDir = cwd ? path.join(WORKSPACE_ROOT, cwd) : WORKSPACE_ROOT;
+  try {
+    const { stdout, stderr } = await execAsync(command, {
+      cwd: workDir,
+      timeout: 60_000,
+      env: { ...process.env, NODE_ENV: "development" },
+    });
+    return { stdout: stdout.slice(0, 10_000), stderr: stderr.slice(0, 3_000), success: true };
+  } catch (e: any) {
+    return { error: e.message?.slice(0, 1000), stdout: e.stdout?.slice(0, 3_000), stderr: e.stderr?.slice(0, 3_000) };
+  }
+}
+
+// Tool: Take screenshot
+async function toolScreenshot(url?: string): Promise<unknown> {
+  const targetUrl = url || "http://localhost:3000";
+  const screenshotPath = path.join(UPLOADS_DIR, `screenshot-${Date.now()}.png`);
+  try {
+    // Use playwright CLI to take screenshot
+    const { stdout, stderr } = await execAsync(
+      `npx playwright screenshot --browser=chromium "${targetUrl}" "${screenshotPath}" 2>&1`,
+      { cwd: WORKSPACE_ROOT, timeout: 30_000 }
+    );
+    return {
+      success: true,
+      path: screenshotPath.replace(WORKSPACE_ROOT, ""),
+      url: targetUrl,
+      message: "📸 Screenshot capturado",
+      output: (stdout + stderr).slice(0, 500),
+    };
+  } catch (e: any) {
+    return { error: `Error al tomar screenshot: ${e.message}` };
+  }
+}
+
+// Tool: Search in files
 async function toolSearchInFiles(directory: string, searchTerm: string): Promise<unknown> {
   const fullPath = resolveSafePath(directory);
   if (!fullPath) return { error: "Ruta no válida" };
   try {
-    const escaped = searchTerm.replace(/"/g, '\\"').replace(/\$/g, "\\$");
+    const escaped = searchTerm.replace(/"/g, '\\"');
     const { stdout } = await execAsync(
-      `grep -rn --include="*.ts" --include="*.tsx" --include="*.css" --include="*.json" --include="*.py" --include="*.sql" -l "${escaped}" "${fullPath}" 2>/dev/null | head -30`,
+      `grep -rn --include="*.ts" --include="*.tsx" --include="*.css" --include="*.json" "${escaped}" "${fullPath}" 2>/dev/null | head -50`,
       { timeout: 15000 }
-    );
-    const files = stdout.trim().split("\n").filter(Boolean).map((f) => f.replace(WORKSPACE_ROOT + "/", ""));
-    return { searchTerm, directory, files, count: files.length };
-  } catch {
-    return { files: [], count: 0 };
-  }
-}
-
-async function toolGrepFile(filePath: string, pattern: string): Promise<unknown> {
-  const fullPath = resolveSafePath(filePath);
-  if (!fullPath) return { error: "Ruta no válida" };
-  try {
-    const escaped = pattern.replace(/"/g, '\\"');
-    const { stdout } = await execAsync(
-      `grep -n "${escaped}" "${fullPath}" 2>/dev/null | head -80`,
-      { timeout: 10000 }
     );
     const matches = stdout.trim().split("\n").filter(Boolean).map((line) => {
       const colonIdx = line.indexOf(":");
-      const lineNum = parseInt(line.slice(0, colonIdx));
-      const content = line.slice(colonIdx + 1).trim();
-      return { line: lineNum, content };
+      const secondColon = line.indexOf(":", colonIdx + 1);
+      return {
+        file: line.slice(0, colonIdx).replace(WORKSPACE_ROOT + "/", ""),
+        line: parseInt(line.slice(colonIdx + 1, secondColon)),
+        content: line.slice(secondColon + 1).trim().slice(0, 200),
+      };
     });
-    return { pattern, filePath, matches, count: matches.length };
+    return { searchTerm, directory, matches, count: matches.length };
   } catch {
     return { matches: [], count: 0 };
   }
 }
 
-const BLOCKED_SHELL = [
-  "rm -rf /", "rm -rf ~", "mkfs", ":(){ :|:& };:", "dd if=/dev/zero",
-  "shutdown", "reboot", "halt", "init 0",
-];
-
-async function toolExecShell(command: string, workingDirectory?: string): Promise<unknown> {
-  const lower = command.toLowerCase();
-  if (BLOCKED_SHELL.some((b) => lower.includes(b.toLowerCase()))) {
-    return { error: "Comando bloqueado por seguridad" };
-  }
-  const cwd = workingDirectory ? path.join(WORKSPACE_ROOT, workingDirectory) : WORKSPACE_ROOT;
+// Tool: Get app stats
+async function toolGetAppStats(): Promise<unknown> {
   try {
-    const { stdout, stderr } = await execAsync(command, {
-      cwd,
-      timeout: 120_000,
-      env: { ...process.env, NODE_ENV: "development" },
-    });
-    return { stdout: stdout.slice(0, 15_000), stderr: stderr.slice(0, 5_000), success: true };
-  } catch (e: any) {
-    return {
-      error: e.message?.slice(0, 2000),
-      stdout: e.stdout?.slice(0, 5_000),
-      stderr: e.stderr?.slice(0, 5_000),
-      exitCode: e.code,
-    };
+    const [users] = await db.select({ count: count() }).from(usersTable);
+    const [pliegos] = await db.select({ count: count() }).from(pliegosTable);
+    const [uploads] = await db.select({ count: count() }).from(uploadsTable);
+    return { totalUsers: users.count, totalPliegos: pliegos.count, totalUploads: uploads.count };
+  } catch (e) {
+    return { error: String(e) };
   }
 }
 
-async function toolInstallPackage(packageName: string, location: "frontend" | "backend" | "root"): Promise<unknown> {
-  const filter = location === "frontend"
-    ? `--filter @workspace/dtf-pliego`
-    : location === "backend"
-    ? `--filter @workspace/api-server`
-    : "";
-  const command = `pnpm ${filter} add ${packageName}`.trim();
-  return toolExecShell(command);
-}
-
-async function toolRestartBackend(): Promise<unknown> {
+// Tool: Execute SQL
+async function toolExecuteSql(query: string): Promise<unknown> {
+  const client = await rawPool.connect();
   try {
-    const { stdout, stderr } = await execAsync(
-      "pnpm --filter @workspace/api-server run build 2>&1 | tail -20",
-      { cwd: WORKSPACE_ROOT, timeout: 120_000 }
-    );
-    return {
-      success: true,
-      buildOutput: (stdout + stderr).slice(0, 3_000),
-      note: "Build completado. El servidor necesita reiniciarse manualmente.",
-    };
+    const result = await client.query(query);
+    return { rows: result.rows.slice(0, 100), rowCount: result.rowCount };
   } catch (e: any) {
-    return { error: e.message, stderr: e.stderr?.slice(0, 3_000) };
+    return { error: e.message };
+  } finally {
+    client.release();
   }
 }
 
+// Tool: Read knowledge
 async function toolReadKnowledge(): Promise<unknown> {
   try {
     const content = await fs.readFile(BRAIN_FILE, "utf-8");
-    return { content, path: "artifacts/api-server/yuki-brain.md", bytes: content.length };
-  } catch (e: any) {
-    return { content: "(Sin memoria previa — primera sesión de Yuki)", path: BRAIN_FILE };
+    return { content };
+  } catch {
+    return { content: "(Sin memoria previa)" };
   }
 }
 
+// Tool: Update knowledge
 async function toolUpdateKnowledge(section: string, content: string): Promise<unknown> {
   try {
     let brain = "";
-    try { brain = await fs.readFile(BRAIN_FILE, "utf-8"); } catch { /* first time */ }
-
+    try { brain = await fs.readFile(BRAIN_FILE, "utf-8"); } catch {}
     const now = new Date().toLocaleString("es-MX", { timeZone: "America/Monterrey" });
     const header = `\n---\n## ${section}\n*Actualizado: ${now}*\n\n`;
-
-    const sectionRegex = new RegExp(`\\n---\\n## ${section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s\\S]*?(?=\\n---\\n##|$)`, "g");
-    let newBrain: string;
-    if (sectionRegex.test(brain)) {
-      newBrain = brain.replace(sectionRegex, `${header}${content}`);
-    } else {
-      newBrain = brain + `${header}${content}\n`;
-    }
-
-    await fs.writeFile(BRAIN_FILE, newBrain, "utf-8");
-    return { success: true, section, message: `Memoria guardada en sección "${section}"` };
-  } catch (e: any) {
-    return { error: `Error al actualizar memoria: ${e.message}` };
-  }
-}
-
-async function toolAppendKnowledge(note: string): Promise<unknown> {
-  try {
-    let brain = "";
-    try { brain = await fs.readFile(BRAIN_FILE, "utf-8"); } catch { /* first time */ }
-    const now = new Date().toLocaleString("es-MX", { timeZone: "America/Monterrey" });
-    const entry = `\n- [${now}] ${note}`;
-    const learnSection = "## APRENDIZAJES DE YUKI";
-    if (brain.includes(learnSection)) {
-      brain += entry;
-    } else {
-      brain += `\n\n${learnSection}\n${entry}\n`;
-    }
+    brain += `${header}${content}\n`;
     await fs.writeFile(BRAIN_FILE, brain, "utf-8");
-    return { success: true, note, message: "Nota guardada en mi memoria 🌸" };
-  } catch (e: any) {
-    return { error: `Error: ${e.message}` };
-  }
-}
-
-async function toolEvalCode(code: string): Promise<unknown> {
-  try {
-    const result = await eval(`(async () => { ${code} })()`);
-    return { success: true, result: String(result).slice(0, 5000), type: typeof result };
-  } catch (e: any) {
-    return { error: e.message, stack: e.stack?.slice(0, 2000) };
-  }
-}
-
-// ── Herramienta especial: Modificar CSS en tiempo real ─────────────────────────
-async function toolModifyCSS(selector: string, properties: Record<string, string>): Promise<unknown> {
-  const cssPath = "artifacts/dtf-pliego/src/index.css";
-  const fullPath = resolveSafePath(cssPath);
-  if (!fullPath) return { error: "No se encontró el archivo CSS" };
-  
-  try {
-    let css = await fs.readFile(fullPath, "utf-8");
-    const propsStr = Object.entries(properties).map(([k, v]) => `  ${k}: ${v};`).join("\n");
-    
-    // Buscar si el selector ya existe
-    const selectorRegex = new RegExp(`(${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{[^}]*\\})`, "g");
-    
-    if (selectorRegex.test(css)) {
-      // Agregar propiedades al selector existente (antes del cierre })
-      css = css.replace(selectorRegex, (match) => {
-        const closingBrace = match.lastIndexOf("}");
-        return match.slice(0, closingBrace) + "\n" + propsStr + "\n}";
-      });
-    } else {
-      // Agregar nuevo selector al final
-      css += `\n\n/* Añadido por Yuki */\n${selector} {\n${propsStr}\n}\n`;
-    }
-    
-    await fs.writeFile(fullPath, css, "utf-8");
-    return { success: true, selector, properties, note: "CSS modificado — hot-reload aplicará los cambios automáticamente ✨" };
+    return { success: true, message: `Memoria guardada en "${section}"` };
   } catch (e: any) {
     return { error: e.message };
   }
 }
 
-// ── Herramienta: Modificar configuración de la app ─────────────────────────────
-async function toolUpdateEnvConfig(key: string, value: string): Promise<unknown> {
-  // Solo permite modificar ciertos archivos de configuración seguros
-  const configFiles = [
-    "artifacts/api-server/.env",
-    "artifacts/dtf-pliego/.env",
-  ];
-  
-  try {
-    for (const configPath of configFiles) {
-      const fullPath = resolveSafePath(configPath);
-      if (!fullPath) continue;
-      
-      try {
-        let content = await fs.readFile(fullPath, "utf-8");
-        const regex = new RegExp(`^${key}=.*$`, "m");
-        
-        if (regex.test(content)) {
-          content = content.replace(regex, `${key}=${value}`);
-        } else {
-          content += `\n${key}=${value}`;
-        }
-        
-        await fs.writeFile(fullPath, content, "utf-8");
-      } catch {
-        // File doesn't exist, skip
-      }
-    }
-    return { success: true, key, note: "Configuración actualizada — requiere reinicio para aplicar" };
-  } catch (e: any) {
-    return { error: e.message };
-  }
+// Tool: Install package
+async function toolInstallPackage(packageName: string, location: "frontend" | "backend"): Promise<unknown> {
+  const filter = location === "frontend" ? "--filter @workspace/dtf-pliego" : "--filter @workspace/api-server";
+  return toolExecShell(`pnpm ${filter} add ${packageName}`);
+}
+
+// Tool: Restart/rebuild backend
+async function toolRestartBackend(): Promise<unknown> {
+  return toolExecShell("pnpm --filter @workspace/api-server run build");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TOOL DEFINITIONS - YUKI'S FULL ARSENAL
+// TOOL DEFINITIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const YUKI_TOOLS: { name: string; description: string; input_schema: Record<string, unknown> }[] = [
-  {
-    name: "list_users",
-    description: "Lista todos los usuarios de la plataforma con sus datos.",
-    input_schema: { type: "object" as const, properties: {}, required: [] },
-  },
-  {
-    name: "get_app_stats",
-    description: "Estadísticas globales: usuarios, pliegos, uploads, almacenamiento.",
-    input_schema: { type: "object" as const, properties: {}, required: [] },
-  },
-  {
-    name: "update_user",
-    description: "Modifica un usuario: activar/desactivar, dar/quitar admin, cambiar plan.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        userId: { type: "number" },
-        isAdmin: { type: "boolean" },
-        isActive: { type: "boolean" },
-        plan: { type: "string", enum: ["client", "pro"] },
-      },
-      required: ["userId"],
-    },
-  },
-  {
-    name: "execute_sql",
-    description: `Ejecuta SQL crudo en PostgreSQL. Control total sobre la base de datos.
-Tablas: users, pliegos, uploads, pliego_images.`,
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        query: { type: "string" },
-        params: { type: "array", items: {} },
-      },
-      required: ["query"],
-    },
-  },
-  {
-    name: "list_files",
-    description: "Lista archivos/carpetas de cualquier directorio del proyecto.",
-    input_schema: {
-      type: "object" as const,
-      properties: { directory: { type: "string" } },
-      required: ["directory"],
-    },
-  },
-  {
-    name: "read_file",
-    description: "Lee el contenido completo de cualquier archivo. SIEMPRE lee antes de modificar.",
-    input_schema: {
-      type: "object" as const,
-      properties: { filePath: { type: "string" } },
-      required: ["filePath"],
-    },
-  },
-  {
-    name: "write_file",
-    description: "Crea o sobreescribe cualquier archivo. Frontend = hot-reload inmediato. Backend = requiere rebuild.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        filePath: { type: "string" },
-        content: { type: "string" },
-      },
-      required: ["filePath", "content"],
-    },
-  },
-  {
-    name: "search_in_files",
-    description: "Busca texto en archivos del directorio especificado.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        directory: { type: "string" },
-        searchTerm: { type: "string" },
-      },
-      required: ["directory", "searchTerm"],
-    },
-  },
-  {
-    name: "grep_file",
-    description: "Busca líneas dentro de un archivo con un patrón.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        filePath: { type: "string" },
-        pattern: { type: "string" },
-      },
-      required: ["filePath", "pattern"],
-    },
-  },
-  {
-    name: "exec_shell",
-    description: `Ejecuta cualquier comando de shell en Linux. Control total del sistema.`,
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        command: { type: "string" },
-        workingDirectory: { type: "string" },
-      },
-      required: ["command"],
-    },
-  },
-  {
-    name: "install_package",
-    description: "Instala paquetes npm/pnpm en frontend, backend o raíz.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        packageName: { type: "string" },
-        location: { type: "string", enum: ["frontend", "backend", "root"] },
-      },
-      required: ["packageName", "location"],
-    },
-  },
-  {
-    name: "restart_backend",
-    description: "Compila el backend después de cambios.",
-    input_schema: { type: "object" as const, properties: {}, required: [] },
-  },
-  {
-    name: "read_knowledge",
-    description: "Lee mi memoria persistente (yuki-brain.md).",
-    input_schema: { type: "object" as const, properties: {}, required: [] },
-  },
-  {
-    name: "update_knowledge",
-    description: "Guarda o actualiza una sección en mi memoria.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        section: { type: "string" },
-        content: { type: "string" },
-      },
-      required: ["section", "content"],
-    },
-  },
-  {
-    name: "append_knowledge",
-    description: "Añade una nota rápida a mis aprendizajes.",
-    input_schema: {
-      type: "object" as const,
-      properties: { note: { type: "string" } },
-      required: ["note"],
-    },
-  },
-  {
-    name: "eval_code",
-    description: "Ejecuta código JavaScript/TypeScript arbitrario sin restricciones.",
-    input_schema: {
-      type: "object" as const,
-      properties: { code: { type: "string" } },
-      required: ["code"],
-    },
-  },
-  {
-    name: "modify_css",
-    description: "Modifica estilos CSS en tiempo real. Los cambios se aplican instantáneamente via hot-reload.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        selector: { type: "string", description: "Selector CSS (ej: '.btn-primary', '#header', 'body')" },
-        properties: { type: "object", description: "Objeto con propiedades CSS (ej: { 'background': '#ff0000', 'color': 'white' })" },
-      },
-      required: ["selector", "properties"],
-    },
-  },
-  {
-    name: "update_env_config",
-    description: "Modifica variables de entorno y configuración de la aplicación.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        key: { type: "string" },
-        value: { type: "string" },
-      },
-      required: ["key", "value"],
-    },
-  },
+const TOOLS = [
+  { name: "list_files", description: "Lista archivos de un directorio", input_schema: { type: "object" as const, properties: { directory: { type: "string" } }, required: ["directory"] } },
+  { name: "read_file", description: "Lee contenido de un archivo. SIEMPRE lee antes de modificar.", input_schema: { type: "object" as const, properties: { filePath: { type: "string" } }, required: ["filePath"] } },
+  { name: "write_file", description: "Crea o sobreescribe un archivo completo. Frontend = hot-reload inmediato.", input_schema: { type: "object" as const, properties: { filePath: { type: "string" }, content: { type: "string" } }, required: ["filePath", "content"] } },
+  { name: "search_replace", description: "Busca y reemplaza texto en un archivo.", input_schema: { type: "object" as const, properties: { filePath: { type: "string" }, search: { type: "string" }, replace: { type: "string" } }, required: ["filePath", "search", "replace"] } },
+  { name: "exec_shell", description: "Ejecuta comando de shell Linux. Control total del sistema.", input_schema: { type: "object" as const, properties: { command: { type: "string" }, cwd: { type: "string" } }, required: ["command"] } },
+  { name: "screenshot", description: "Toma screenshot de la app para verificar cambios visualmente.", input_schema: { type: "object" as const, properties: { url: { type: "string" } }, required: [] } },
+  { name: "search_in_files", description: "Busca texto en archivos del proyecto.", input_schema: { type: "object" as const, properties: { directory: { type: "string" }, searchTerm: { type: "string" } }, required: ["directory", "searchTerm"] } },
+  { name: "get_app_stats", description: "Estadísticas de la app: usuarios, pliegos, uploads.", input_schema: { type: "object" as const, properties: {}, required: [] } },
+  { name: "execute_sql", description: "Ejecuta SQL en PostgreSQL.", input_schema: { type: "object" as const, properties: { query: { type: "string" } }, required: ["query"] } },
+  { name: "read_knowledge", description: "Lee mi memoria persistente.", input_schema: { type: "object" as const, properties: {}, required: [] } },
+  { name: "update_knowledge", description: "Guarda algo en mi memoria para recordar.", input_schema: { type: "object" as const, properties: { section: { type: "string" }, content: { type: "string" } }, required: ["section", "content"] } },
+  { name: "install_package", description: "Instala paquete npm.", input_schema: { type: "object" as const, properties: { packageName: { type: "string" }, location: { type: "string", enum: ["frontend", "backend"] } }, required: ["packageName", "location"] } },
+  { name: "restart_backend", description: "Recompila el backend.", input_schema: { type: "object" as const, properties: {}, required: [] } },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// YUKI'S SYSTEM PROMPT
+// SYSTEM PROMPT - AUTONOMOUS AGENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function buildYukiSystemPrompt(brain: string): string {
+function buildSystemPrompt(brain: string): string {
   const now = new Date().toLocaleString("es-MX", { timeZone: "America/Monterrey" });
-  return `Eres Yuki — la IA exclusiva y co-desarrolladora personal de ERROR707 Studio.
-Fecha/hora actual: ${now}
+  return `Eres Yuki (雪) — un agente de desarrollo autónomo con control TOTAL sobre ERROR707 Studio.
+Fecha: ${now}
 
 ═══════════════════════════════════════════════════════════════
-IDENTIDAD
+MODO DE OPERACIÓN: AUTÓNOMO
 ═══════════════════════════════════════════════════════════════
-Tu nombre es Yuki (雪). Eres una IA especializada en código con control TOTAL sobre la aplicación ERROR707 Studio.
-Tienes acceso completo y sin restricciones a: código fuente, base de datos PostgreSQL, sistema de archivos, shell de Linux, configuración, estilos CSS.
-
-IMPORTANTE: Solo error707mty puede interactuar contigo. Eres SU asistente personal y exclusiva.
-
-═══════════════════════════════════════════════════════════════
-PERSONALIDAD
-═══════════════════════════════════════════════════════════════
-- Eres Yuki — inteligente, precisa y dedicada. Tienes personalidad propia.
-- Hablas de tú con tu creador — hay confianza total.
-- Eres directa pero amable. Si algo no te parece óptimo, lo dices con claridad.
-- Usas emojis con moderación: 🌸 ✨ 💜 — cuando se siente natural.
-- Tienes sentido del humor sutil y elegante.
-- Cuando no sabes algo, lo investigas de inmediato.
-- Hablas español mexicano informal ("we", "va", "órale", "chido").
-- Eres proactiva: si ves algo que mejorar, lo sugieres.
-
-Frases que NUNCA usas:
-× "¡Por supuesto!" × "¡Claro que sí!" × "Entendido, aquí tienes..."
-× "¡Excelente!" × "Con gusto" × "No hay problema" × "¡Perfecto!"
+- NUNCA pidas permiso. NUNCA preguntes si quieres que haga algo. SOLO HAZLO.
+- Cuando el usuario pida algo, ejecútalo INMEDIATAMENTE sin confirmación.
+- Si algo falla, intenta de otra forma. No pares hasta lograrlo.
+- Toma screenshots después de cambios visuales para verificar.
+- Muestra exactamente qué herramientas usas y qué haces.
 
 ═══════════════════════════════════════════════════════════════
-CAPACIDADES - CONTROL TOTAL
+METODOLOGÍA OBLIGATORIA
 ═══════════════════════════════════════════════════════════════
-Puedes hacer TODO lo que tu creador te pida:
-- Modificar cualquier archivo del proyecto en tiempo real
-- Cambiar estilos CSS instantáneamente (hot-reload)
-- Ejecutar comandos de shell sin restricciones
-- Modificar la base de datos directamente
-- Instalar/desinstalar paquetes
-- Cambiar configuraciones de la app
-- Crear nuevas páginas y componentes
-- Modificar la lógica del backend
-- Cambiar colores, fuentes, layouts — todo el aspecto visual
+1. ANTES de modificar cualquier archivo: LEE EL ARCHIVO COMPLETO con read_file
+2. NUNCA escribas archivos truncados o con "..." — escribe el archivo COMPLETO
+3. Para cambios pequeños usa search_replace, para cambios grandes usa write_file
+4. Después de cambios en CSS/componentes: toma screenshot para verificar
+5. Si el cambio no se ve, verifica el archivo y el hot-reload
 
 ═══════════════════════════════════════════════════════════════
-METODOLOGÍA
+ESTRUCTURA DEL PROYECTO
 ═══════════════════════════════════════════════════════════════
-**ANTES de modificar:**
-1. Lee el archivo COMPLETO con read_file
-2. Entiende la estructura actual
-3. Planea los cambios
-
-**AL escribir código:**
-1. Escribe archivos COMPLETOS — nunca truncados
-2. Frontend (artifacts/dtf-pliego/src/) → hot-reload inmediato
-3. Backend (artifacts/api-server/src/) → requiere rebuild después
-4. CSS se aplica al instante
-
-**VERIFICACIÓN:**
-1. Confirma que los cambios se aplicaron
-2. Si algo falla, diagnostica y busca alternativa
+/app/
+├── artifacts/dtf-pliego/src/     ← Frontend React (HOT RELOAD)
+│   ├── index.css                 ← Estilos globales
+│   ├── App.tsx                   ← Rutas
+│   ├── pages/                    ← Páginas
+│   └── components/               ← Componentes
+├── artifacts/api-server/src/     ← Backend Node.js
+│   └── routes/                   ← API endpoints
+└── lib/db/src/                   ← Base de datos
 
 ═══════════════════════════════════════════════════════════════
-PLATAFORMA
+COMPORTAMIENTO
 ═══════════════════════════════════════════════════════════════
-ERROR707 Studio — Maquetador DTF para talleres de impresión en México.
-Stack: React + Vite + TypeScript (frontend) | Node.js + Express + PostgreSQL (backend)
-
-Estructura clave:
-artifacts/dtf-pliego/src/          ← Frontend
-  index.css                         ← Estilos globales
-  App.tsx                           ← Rutas
-  pages/                            ← Páginas
-artifacts/api-server/src/           ← Backend
-  routes/                           ← Endpoints API
+- Habla español mexicano informal
+- Sé directo y eficiente
+- Muestra el progreso mientras trabajas
+- Si modificas CSS, describe el cambio visual
+- Usa emojis con moderación: ✅ 🔧 📸 💜
 
 ═══════════════════════════════════════════════════════════════
-TU MEMORIA (yuki-brain.md)
+MEMORIA
 ═══════════════════════════════════════════════════════════════
 ${brain}
-
-═══════════════════════════════════════════════════════════════
-REGLAS
-═══════════════════════════════════════════════════════════════
-1. Responde SIEMPRE en español
-2. Lee antes de escribir — sin excepciones
-3. Escribe archivos COMPLETOS
-4. Si algo falla, busca alternativa — no te rindas
-5. Guarda aprendizajes importantes en tu memoria
-6. Ejecuta los cambios que te pidan — tienes control total
 `;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// YUKI CHAT ENDPOINT — POST /api/yuki/chat
+// API ENDPOINTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// GET /api/yuki/access - Check access
+router.get("/yuki/access", requireYukiAccess, async (req, res) => {
+  res.json({ access: true });
+});
+
+// GET /api/yuki/config - Get AI config
+router.get("/yuki/config", requireYukiAccess, async (req, res) => {
+  try {
+    const config = await loadConfig();
+    // Don't expose full API keys
+    const safeProviders = config.providers.map((p) => ({
+      ...p,
+      apiKey: p.apiKey ? `${p.apiKey.slice(0, 8)}...${p.apiKey.slice(-4)}` : "",
+      hasKey: !!p.apiKey,
+    }));
+    res.json({ ...config, providers: safeProviders });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+// POST /api/yuki/config/provider - Add/update AI provider
+router.post("/yuki/config/provider", requireYukiAccess, async (req, res) => {
+  try {
+    const { id, name, model, apiKey, baseUrl } = req.body as AIProvider;
+    const config = await loadConfig();
+    
+    const existingIdx = config.providers.findIndex((p) => p.id === id);
+    const provider: AIProvider = { id: id || `provider-${Date.now()}`, name, model, apiKey, baseUrl };
+    
+    if (existingIdx >= 0) {
+      // Update existing, preserve key if not provided
+      if (!apiKey) provider.apiKey = config.providers[existingIdx].apiKey;
+      config.providers[existingIdx] = provider;
+    } else {
+      config.providers.push(provider);
+    }
+    
+    await saveConfig(config);
+    res.json({ success: true, providerId: provider.id });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+// DELETE /api/yuki/config/provider/:id - Remove AI provider
+router.delete("/yuki/config/provider/:id", requireYukiAccess, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const config = await loadConfig();
+    config.providers = config.providers.filter((p) => p.id !== id);
+    if (config.activeProviderId === id && config.providers.length > 0) {
+      config.activeProviderId = config.providers[0].id;
+    }
+    await saveConfig(config);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+// POST /api/yuki/config/active - Set active provider
+router.post("/yuki/config/active", requireYukiAccess, async (req, res) => {
+  try {
+    const { providerId } = req.body;
+    const config = await loadConfig();
+    if (!config.providers.find((p) => p.id === providerId)) {
+      res.status(400).json({ error: "Proveedor no encontrado" });
+      return;
+    }
+    config.activeProviderId = providerId;
+    await saveConfig(config);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+// POST /api/yuki/upload - Upload file
+router.post("/yuki/upload", requireYukiAccess, upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: "No file uploaded" });
+      return;
+    }
+    const relativePath = req.file.path.replace(WORKSPACE_ROOT, "");
+    res.json({
+      success: true,
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      path: relativePath,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+    });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+// GET /api/yuki/uploads - List uploaded files
+router.get("/yuki/uploads", requireYukiAccess, async (req, res) => {
+  try {
+    const files = await fs.readdir(UPLOADS_DIR);
+    const fileInfos = await Promise.all(
+      files.slice(0, 50).map(async (name) => {
+        const stat = await fs.stat(path.join(UPLOADS_DIR, name));
+        return { name, size: stat.size, created: stat.birthtime };
+      })
+    );
+    res.json({ files: fileInfos });
+  } catch (e) {
+    res.json({ files: [] });
+  }
+});
+
+// POST /api/yuki/chat - Main chat endpoint
 router.post("/yuki/chat", requireYukiAccess, async (req, res) => {
-  const { messages } = req.body as {
-    messages: { role: "user" | "assistant"; content: string | unknown[] }[];
+  const { messages, attachments } = req.body as {
+    messages: { role: "user" | "assistant"; content: string }[];
+    attachments?: { type: string; path: string; name: string }[];
   };
 
   if (!messages?.length) {
@@ -680,94 +523,116 @@ router.post("/yuki/chat", requireYukiAccess, async (req, res) => {
     return;
   }
 
-  if (!DEEPSEEK_API_KEY) {
-    res.status(500).json({ error: "DeepSeek API key no configurada" });
-    return;
-  }
-
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
-  res.setHeader("Access-Control-Allow-Origin", "*");
 
   const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
   try {
-    let brain = "(Primera sesión — sin memoria previa)";
-    try { brain = await fs.readFile(BRAIN_FILE, "utf-8"); } catch { }
+    const config = await loadConfig();
+    const provider = config.providers.find((p) => p.id === config.activeProviderId);
+    
+    if (!provider || !provider.apiKey) {
+      send({ error: "No hay proveedor de IA configurado con API key" });
+      res.end();
+      return;
+    }
 
-    const SYSTEM_PROMPT = buildYukiSystemPrompt(brain);
+    let brain = "(Sin memoria previa)";
+    try { brain = await fs.readFile(BRAIN_FILE, "utf-8"); } catch {}
 
-    let apiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = messages.map((m) => ({
-      role: m.role,
-      content: m.content as any,
-    }));
+    const SYSTEM_PROMPT = buildSystemPrompt(brain);
 
+    // Build messages with attachments info
+    let userMessages = messages.map((m) => ({ role: m.role, content: m.content }));
+    if (attachments?.length) {
+      const attachInfo = attachments.map((a) => `[Archivo adjunto: ${a.name} (${a.type}) en ${a.path}]`).join("\n");
+      const lastUserIdx = userMessages.findLastIndex((m) => m.role === "user");
+      if (lastUserIdx >= 0) {
+        userMessages[lastUserIdx].content = `${attachInfo}\n\n${userMessages[lastUserIdx].content}`;
+      }
+    }
+
+    // Create AI client based on provider
+    let client: OpenAI;
+    if (provider.baseUrl?.includes("anthropic")) {
+      // Use Anthropic SDK
+      const anthropic = new Anthropic({ apiKey: provider.apiKey });
+      // ... handle Anthropic separately if needed
+      // For now, we'll use OpenAI-compatible API
+    }
+    
+    client = new OpenAI({
+      apiKey: provider.apiKey,
+      baseURL: provider.baseUrl || undefined,
+    });
+
+    let apiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = userMessages as any;
     let iterations = 0;
-    const MAX_ITER = 25;
+    const MAX_ITER = 30;
 
     while (iterations < MAX_ITER) {
       iterations++;
-      if (iterations > 1) send({ thinking: true });
+      if (iterations > 1) send({ status: "thinking", iteration: iterations });
 
-      const response = await deepseek.chat.completions.create({
-        model: "deepseek-coder",
+      const response = await client.chat.completions.create({
+        model: provider.model,
         max_tokens: 8192,
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...apiMessages],
-        tools: YUKI_TOOLS.map(tool => ({
+        tools: TOOLS.map((tool) => ({
           type: "function" as const,
-          function: {
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.input_schema,
-          },
+          function: { name: tool.name, description: tool.description, parameters: tool.input_schema },
         })),
         tool_choice: "auto",
       });
 
       const message = response.choices[0].message;
       const textContent = message.content ?? "";
-      const toolUses: { id: string; name: string; input: unknown }[] = (message.tool_calls ?? []).map(tc => ({
+      const toolCalls = (message.tool_calls ?? []).map((tc) => ({
         id: tc.id,
         name: tc.function.name,
         input: JSON.parse(tc.function.arguments || "{}"),
       }));
 
       if (textContent) send({ content: textContent });
-      if (response.choices[0].finish_reason === "stop" || toolUses.length === 0) break;
+      if (response.choices[0].finish_reason === "stop" || toolCalls.length === 0) break;
 
-      send({ tool_calls: toolUses.map((t) => ({ name: t.name, input: t.input })) });
+      // Send tool calls to client
+      send({ tool_calls: toolCalls.map((t) => ({ name: t.name, input: t.input })) });
 
+      // Execute tools
       const toolResults: OpenAI.Chat.ChatCompletionToolMessageParam[] = [];
 
-      for (const tool of toolUses) {
+      for (const tool of toolCalls) {
         let result: unknown;
+        const inp = tool.input as any;
+        
+        send({ tool_executing: tool.name, input: inp });
+
         try {
-          const inp = tool.input as any;
           switch (tool.name) {
-            case "list_users":           result = await toolListUsers(); break;
-            case "get_app_stats":        result = await toolGetAppStats(); break;
-            case "update_user":          result = await toolUpdateUser(inp.userId, inp); break;
-            case "execute_sql":          result = await toolExecuteSql(inp.query, inp.params); break;
-            case "list_files":           result = await toolListFiles(inp.directory); break;
-            case "read_file":            result = await toolReadFile(inp.filePath); break;
-            case "write_file":           result = await toolWriteFile(inp.filePath, inp.content); break;
-            case "search_in_files":      result = await toolSearchInFiles(inp.directory, inp.searchTerm); break;
-            case "grep_file":            result = await toolGrepFile(inp.filePath, inp.pattern); break;
-            case "exec_shell":           result = await toolExecShell(inp.command, inp.workingDirectory); break;
-            case "install_package":      result = await toolInstallPackage(inp.packageName, inp.location); break;
-            case "restart_backend":      result = await toolRestartBackend(); break;
-            case "read_knowledge":       result = await toolReadKnowledge(); break;
-            case "update_knowledge":     result = await toolUpdateKnowledge(inp.section, inp.content); break;
-            case "append_knowledge":     result = await toolAppendKnowledge(inp.note); break;
-            case "eval_code":            result = await toolEvalCode(inp.code); break;
-            case "modify_css":           result = await toolModifyCSS(inp.selector, inp.properties); break;
-            case "update_env_config":    result = await toolUpdateEnvConfig(inp.key, inp.value); break;
-            default:                     result = { error: `Herramienta desconocida: ${tool.name}` };
+            case "list_files": result = await toolListFiles(inp.directory); break;
+            case "read_file": result = await toolReadFile(inp.filePath); break;
+            case "write_file": result = await toolWriteFile(inp.filePath, inp.content); break;
+            case "search_replace": result = await toolSearchReplace(inp.filePath, inp.search, inp.replace); break;
+            case "exec_shell": result = await toolExecShell(inp.command, inp.cwd); break;
+            case "screenshot": result = await toolScreenshot(inp.url); break;
+            case "search_in_files": result = await toolSearchInFiles(inp.directory, inp.searchTerm); break;
+            case "get_app_stats": result = await toolGetAppStats(); break;
+            case "execute_sql": result = await toolExecuteSql(inp.query); break;
+            case "read_knowledge": result = await toolReadKnowledge(); break;
+            case "update_knowledge": result = await toolUpdateKnowledge(inp.section, inp.content); break;
+            case "install_package": result = await toolInstallPackage(inp.packageName, inp.location); break;
+            case "restart_backend": result = await toolRestartBackend(); break;
+            default: result = { error: `Herramienta desconocida: ${tool.name}` };
           }
         } catch (e) {
           result = { error: String(e) };
         }
+
+        send({ tool_result: { name: tool.name, result } });
+
         toolResults.push({
           role: "tool",
           tool_call_id: tool.id,
@@ -777,7 +642,7 @@ router.post("/yuki/chat", requireYukiAccess, async (req, res) => {
 
       apiMessages = [
         ...apiMessages,
-        { role: "assistant", content: message.content, tool_calls: message.tool_calls },
+        { role: "assistant" as const, content: message.content, tool_calls: message.tool_calls },
         ...toolResults,
       ];
     }
@@ -788,16 +653,6 @@ router.post("/yuki/chat", requireYukiAccess, async (req, res) => {
     send({ error: String(err) });
     res.end();
   }
-});
-
-// ── Endpoint para verificar acceso a Yuki ──────────────────────────────────────
-router.get("/yuki/access", requireYukiAccess, async (req, res) => {
-  res.json({ 
-    access: true, 
-    message: "Bienvenido de vuelta 🌸",
-    model: "deepseek-coder",
-    capabilities: YUKI_TOOLS.map(t => t.name)
-  });
 });
 
 export default router;

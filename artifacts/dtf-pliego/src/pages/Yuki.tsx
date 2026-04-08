@@ -1,14 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { 
   Send, Loader2, Settings, Github, RefreshCw, 
   ExternalLink, X, Check, AlertCircle, 
-  Eye, Trash2, Upload, FolderTree, Terminal,
-  FileCode, ChevronRight, Play, Maximize2, Minimize2,
-  Menu, ChevronLeft, Plus, GitBranch,
-  Code, FileText, Database, Cpu, Zap,
-  Sparkles, Command, Terminal as TerminalIcon,
-  Globe, Shield, Cpu as CpuIcon
+  Eye, Trash2, Upload, Terminal, Play,
+  Maximize2, Minimize2, Menu, ChevronLeft,
+  Plus, Image, Paperclip, Bot, Sparkles,
+  FileCode, Cpu, Key, Zap
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -18,31 +16,26 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   toolCalls?: { name: string; input: unknown }[];
+  toolResults?: { name: string; result: unknown }[];
   isThinking?: boolean;
+  attachments?: { name: string; type: string; path: string }[];
 }
 
-interface GitHubConfig {
-  configured: boolean;
-  repoUrl?: string;
-  tokenSet?: boolean;
-  tokenPreview?: string;
-  lastPush?: string;
-}
-
-interface GitStatus {
-  branch: string;
-  lastCommit: string;
-  changesCount: number;
-  hasChanges: boolean;
-  changes: { status: string; file: string }[];
-}
-
-interface SavedRepo {
-  url: string;
+interface AIProvider {
+  id: string;
   name: string;
+  model: string;
+  apiKey?: string;
+  hasKey?: boolean;
+  baseUrl?: string;
 }
 
-// Markdown renderer minimalista
+interface YukiConfig {
+  providers: AIProvider[];
+  activeProviderId: string;
+}
+
+// Markdown renderer
 function renderMarkdown(text: string): string {
   const codeBlocks: string[] = [];
   let result = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_m, _lang, code) => {
@@ -50,33 +43,27 @@ function renderMarkdown(text: string): string {
     codeBlocks.push(`<pre class="yk-code"><code>${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`);
     return `%%CB${idx}%%`;
   });
-
   const inlines: string[] = [];
   result = result.replace(/`([^`]+)`/g, (_m, code) => {
     const idx = inlines.length;
     inlines.push(`<code class="yk-inline">${code.replace(/</g, "&lt;")}</code>`);
     return `%%IL${idx}%%`;
   });
-
   result = result.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   result = result.replace(/\*([^*]+)\*/g, "<em>$1</em>");
   result = result.replace(/^### (.+)$/gm, "<h4>$1</h4>");
   result = result.replace(/^## (.+)$/gm, "<h3>$1</h3>");
-  result = result.replace(/^# (.+)$/gm, "<h2>$1</h2>");
   result = result.replace(/(^- .+\n?)+/gm, (block) => {
     const items = block.trim().split("\n").map((l) => `<li>${l.replace(/^- /, "")}</li>`).join("");
     return `<ul>${items}</ul>`;
   });
-
   result = result.split(/\n\n+/).map((p) => {
     p = p.trim();
     if (!p || /^<[huo]/.test(p) || p.startsWith("%%")) return p;
     return `<p>${p.replace(/\n/g, "<br/>")}</p>`;
   }).join("");
-
   codeBlocks.forEach((b, i) => { result = result.replace(`%%CB${i}%%`, b); });
   inlines.forEach((c, i) => { result = result.replace(`%%IL${i}%%`, c); });
-
   return result;
 }
 
@@ -84,43 +71,49 @@ export default function Yuki() {
   const [, setLocation] = useLocation();
   const { token } = useAuth();
   
-  // Core state
+  // Access
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  
+  // Chat
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [currentTool, setCurrentTool] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // UI state
+  // Attachments
+  const [attachments, setAttachments] = useState<{ name: string; type: string; path: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  
+  // UI
   const [activePanel, setActivePanel] = useState<"preview" | "terminal">("preview");
   const [showSettings, setShowSettings] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const [focusMode, setFocusMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<"github" | "repos">("github");
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   
-  // GitHub state
-  const [githubConfig, setGithubConfig] = useState<GitHubConfig | null>(null);
-  const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
-  const [repoUrl, setRepoUrl] = useState("");
-  const [githubToken, setGithubToken] = useState("");
-  const [pushing, setPushing] = useState(false);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [savedRepos, setSavedRepos] = useState<SavedRepo[]>([]);
-  const [newRepoUrl, setNewRepoUrl] = useState("");
-  const [cloning, setCloning] = useState(false);
+  // AI Config
+  const [config, setConfig] = useState<YukiConfig | null>(null);
+  const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null);
+  const [newProviderForm, setNewProviderForm] = useState({ name: "", model: "", apiKey: "", baseUrl: "" });
   
-  // Terminal state
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(["$ Yuki Terminal Ready"]);
+  // Terminal
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(["$ Yuki Terminal"]);
   const [terminalInput, setTerminalInput] = useState("");
   const [runningCmd, setRunningCmd] = useState(false);
   const terminalEndRef = useRef<HTMLDivElement>(null);
+  
+  // GitHub
+  const [githubConfig, setGithubConfig] = useState<{ repoUrl?: string; tokenSet?: boolean } | null>(null);
+  const [pushing, setPushing] = useState(false);
 
   const previewUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
-  // Auto-resize textarea
+  // Effects
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
@@ -128,7 +121,6 @@ export default function Yuki() {
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   }, [input]);
 
-  // Scroll effects
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -137,7 +129,6 @@ export default function Yuki() {
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [terminalOutput]);
 
-  // Check access
   useEffect(() => {
     if (!token) { setHasAccess(false); return; }
     fetch(`${API_BASE}/yuki/access`, { headers: { Authorization: `Bearer ${token}` } })
@@ -145,127 +136,95 @@ export default function Yuki() {
       .catch(() => setHasAccess(false));
   }, [token]);
 
-  // Load initial data
   useEffect(() => {
     if (!token || !hasAccess) return;
+    loadConfig();
     loadGitHubConfig();
-    loadGitStatus();
-    loadSavedRepos();
   }, [token, hasAccess]);
 
-  // Toast auto-hide
   useEffect(() => {
     if (toast) {
-      const t = setTimeout(() => setToast(null), 4000);
+      const t = setTimeout(() => setToast(null), 3000);
       return () => clearTimeout(t);
     }
   }, [toast]);
 
-  // Close mobile menu on resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth > 768) setMobileMenuOpen(false);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const showToast = (type: "success" | "error", msg: string) => setToast({ type, msg });
 
-  const showToast = (type: "success" | "error", message: string) => setToast({ type, message });
+  // API
+  const loadConfig = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/yuki/config`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setConfig(await res.json());
+    } catch {}
+  };
 
-  // API calls
   const loadGitHubConfig = async () => {
     try {
       const res = await fetch(`${API_BASE}/github/config`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const cfg = await res.json();
-        setGithubConfig(cfg);
-        if (cfg.repoUrl) setRepoUrl(cfg.repoUrl);
-      }
+      if (res.ok) setGithubConfig(await res.json());
     } catch {}
   };
 
-  const loadGitStatus = async () => {
+  const saveProvider = async () => {
+    if (!newProviderForm.name || !newProviderForm.model) return;
     try {
-      const res = await fetch(`${API_BASE}/github/status`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setGitStatus(await res.json());
-    } catch {}
-  };
-
-  const loadSavedRepos = () => {
-    try {
-      const saved = localStorage.getItem('yk-repos');
-      if (saved) setSavedRepos(JSON.parse(saved));
-    } catch {}
-  };
-
-  const saveRepoToList = (url: string) => {
-    const name = url.split('/').slice(-2).join('/').replace('.git', '');
-    const newRepos = [...savedRepos.filter(r => r.url !== url), { url, name }];
-    setSavedRepos(newRepos);
-    localStorage.setItem('yk-repos', JSON.stringify(newRepos));
-  };
-
-  const removeRepoFromList = (url: string) => {
-    const newRepos = savedRepos.filter(r => r.url !== url);
-    setSavedRepos(newRepos);
-    localStorage.setItem('yk-repos', JSON.stringify(newRepos));
-  };
-
-  const saveGitHubConfig = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/github/config`, {
+      const res = await fetch(`${API_BASE}/yuki/config/provider`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ repoUrl: repoUrl || undefined, token: githubToken || undefined }),
-      });
-      if (res.ok) {
-        await loadGitHubConfig();
-        setGithubToken("");
-        if (repoUrl) saveRepoToList(repoUrl);
-        showToast("success", "Configuración guardada");
-      }
-    } catch (e) {
-      showToast("error", "Error al guardar");
-    }
-  };
-
-  const selectRepo = async (url: string) => {
-    setRepoUrl(url);
-    try {
-      const res = await fetch(`${API_BASE}/github/config`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ repoUrl: url }),
-      });
-      if (res.ok) {
-        await loadGitHubConfig();
-        await loadGitStatus();
-        showToast("success", `Repo cambiado a ${url.split('/').slice(-1)[0]}`);
-      }
-    } catch {}
-  };
-
-  const cloneRepo = async () => {
-    if (!newRepoUrl.trim()) return;
-    setCloning(true);
-    try {
-      // Use Yuki to clone
-      const res = await fetch(`${API_BASE}/yuki/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ 
-          messages: [{ role: "user", content: `Clona el repositorio ${newRepoUrl} en /app/repos/ y configúralo` }] 
+        body: JSON.stringify({
+          id: editingProvider?.id,
+          ...newProviderForm,
         }),
       });
       if (res.ok) {
-        saveRepoToList(newRepoUrl);
-        setNewRepoUrl("");
-        showToast("success", "Repositorio clonado");
+        await loadConfig();
+        setNewProviderForm({ name: "", model: "", apiKey: "", baseUrl: "" });
+        setEditingProvider(null);
+        showToast("success", "Proveedor guardado");
       }
-    } catch (e) {
-      showToast("error", "Error al clonar");
-    }
-    setCloning(false);
+    } catch {}
+  };
+
+  const deleteProvider = async (id: string) => {
+    try {
+      await fetch(`${API_BASE}/yuki/config/provider/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      await loadConfig();
+    } catch {}
+  };
+
+  const setActiveProvider = async (id: string) => {
+    try {
+      await fetch(`${API_BASE}/yuki/config/active`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ providerId: id }),
+      });
+      await loadConfig();
+      showToast("success", "Proveedor activado");
+    } catch {}
+  };
+
+  const uploadFile = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${API_BASE}/yuki/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAttachments(prev => [...prev, { name: data.originalName, type: data.mimetype, path: data.path }]);
+        showToast("success", `${data.originalName} subido`);
+      }
+    } catch {}
+    setUploading(false);
   };
 
   const pushToGitHub = async () => {
@@ -276,16 +235,9 @@ export default function Yuki() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({}),
       });
-      const data = await res.json();
-      if (res.ok) {
-        showToast("success", "Push exitoso 🎉");
-        await loadGitStatus();
-      } else {
-        showToast("error", data.error || "Error en push");
-      }
-    } catch (e) {
-      showToast("error", String(e));
-    }
+      if (res.ok) showToast("success", "Push exitoso 🎉");
+      else showToast("error", "Error en push");
+    } catch {}
     setPushing(false);
   };
 
@@ -300,9 +252,7 @@ export default function Yuki() {
       const res = await fetch(`${API_BASE}/yuki/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ 
-          messages: [{ role: "user", content: `Ejecuta este comando y dame solo el output sin explicaciones: ${cmd}` }] 
-        }),
+        body: JSON.stringify({ messages: [{ role: "user", content: `Ejecuta: ${cmd}` }] }),
       });
       const text = await res.text();
       const lines = text.split("\n").filter(l => l.startsWith("data: "));
@@ -310,13 +260,12 @@ export default function Yuki() {
       for (const line of lines) {
         try {
           const data = JSON.parse(line.slice(6));
+          if (data.tool_result?.result?.stdout) output += data.tool_result.result.stdout;
           if (data.content) output += data.content;
         } catch {}
       }
       setTerminalOutput(prev => [...prev, output || "(sin output)"]);
-    } catch (e) {
-      setTerminalOutput(prev => [...prev, `Error: ${e}`]);
-    }
+    } catch {}
     setRunningCmd(false);
   };
 
@@ -329,17 +278,22 @@ export default function Yuki() {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const userMsg: Message = { role: "user", content: text };
+    const userMsg: Message = { role: "user", content: text, attachments: attachments.length ? [...attachments] : undefined };
     const history = [...messages, userMsg];
     setMessages([...history, { role: "assistant", content: "", isThinking: true }]);
     setInput("");
+    setAttachments([]);
     setLoading(true);
+    setCurrentTool(null);
 
     try {
       const res = await fetch(`${API_BASE}/yuki/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ messages: history.map(m => ({ role: m.role, content: m.content })) }),
+        body: JSON.stringify({ 
+          messages: history.map(m => ({ role: m.role, content: m.content })),
+          attachments: userMsg.attachments,
+        }),
         signal: controller.signal,
       });
 
@@ -348,6 +302,7 @@ export default function Yuki() {
       let buffer = "";
       let accumulated = "";
       let tools: { name: string; input: unknown }[] = [];
+      let toolResults: { name: string; result: unknown }[] = [];
 
       setMessages(prev => {
         const updated = [...prev];
@@ -368,19 +323,41 @@ export default function Yuki() {
           if (!line.startsWith("data: ")) continue;
           try {
             const data = JSON.parse(line.slice(6));
+            
             if (data.done) {
               setPreviewKey(k => k + 1);
-              loadGitStatus();
+              setCurrentTool(null);
               break;
             }
-            if (data.tool_calls) tools = [...tools, ...data.tool_calls];
+            
+            if (data.tool_executing) {
+              setCurrentTool(data.tool_executing);
+            }
+            
+            if (data.tool_calls) {
+              tools = [...tools, ...data.tool_calls];
+            }
+            
+            if (data.tool_result) {
+              toolResults = [...toolResults, data.tool_result];
+              // Auto-refresh preview on file changes
+              if (data.tool_result.name === "write_file" || data.tool_result.name === "search_replace") {
+                setPreviewKey(k => k + 1);
+              }
+            }
+            
             if (data.content) {
               accumulated += data.content;
               setMessages(prev => {
                 const updated = [...prev];
                 const last = updated[updated.length - 1];
                 if (last?.role === "assistant") {
-                  updated[updated.length - 1] = { ...last, content: accumulated, toolCalls: tools.length ? tools : undefined };
+                  updated[updated.length - 1] = { 
+                    ...last, 
+                    content: accumulated, 
+                    toolCalls: tools.length ? tools : undefined,
+                    toolResults: toolResults.length ? toolResults : undefined,
+                  };
                 }
                 return updated;
               });
@@ -401,6 +378,7 @@ export default function Yuki() {
       }
     }
     setLoading(false);
+    setCurrentTool(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -410,9 +388,12 @@ export default function Yuki() {
     }
   };
 
-  const clearChat = () => {
-    setMessages([]);
-    setInput("");
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach(uploadFile);
+    }
+    e.target.value = "";
   };
 
   // Access check
@@ -438,58 +419,58 @@ export default function Yuki() {
     );
   }
 
+  const activeProvider = config?.providers.find(p => p.id === config.activeProviderId);
+
   return (
     <div className={`yk-root ${focusMode ? 'yk-focus' : ''}`}>
       {/* Toast */}
       {toast && (
         <div className={`yk-toast yk-toast-${toast.type}`}>
-          {toast.type === "success" ? <Check size={16} /> : <AlertCircle size={16} />}
-          <span>{toast.message}</span>
+          {toast.type === "success" ? <Check size={14} /> : <AlertCircle size={14} />}
+          <span>{toast.msg}</span>
         </div>
       )}
 
-      {/* Header minimalista */}
+      {/* Header */}
       <header className="yk-header">
         <div className="yk-header-left">
-          {/* Mobile menu button */}
           <button className="yk-mobile-menu-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            <Menu size={20} />
+            <Menu size={18} />
           </button>
-          
           <div className="yk-logo" onClick={() => setLocation("/")}>
             <span className="yk-logo-icon">雪</span>
             <span className="yk-logo-text">Yuki</span>
           </div>
-          
-          {gitStatus && (
-            <div className="yk-git-badge">
-              <GitBranch size={12} />
-              <span>{gitStatus.branch}</span>
-              {gitStatus.hasChanges && <span className="yk-git-changes">+{gitStatus.changesCount}</span>}
+          {activeProvider && (
+            <div className="yk-provider-badge" onClick={() => setShowSettings(true)}>
+              <Cpu size={12} />
+              <span>{activeProvider.name}</span>
             </div>
           )}
         </div>
         
         <div className="yk-header-right">
-          <button 
-            className={`yk-header-btn yk-focus-btn ${focusMode ? 'active' : ''}`} 
-            onClick={() => setFocusMode(!focusMode)} 
-            title={focusMode ? "Salir de Focus" : "Modo Focus"}
-          >
+          {currentTool && (
+            <div className="yk-current-tool">
+              <Zap size={12} />
+              <span>{currentTool}</span>
+            </div>
+          )}
+          <button className={`yk-header-btn ${focusMode ? 'active' : ''}`} onClick={() => setFocusMode(!focusMode)} title="Focus">
             {focusMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </button>
-          <button className="yk-header-btn" onClick={() => { setPreviewKey(k => k + 1); loadGitStatus(); }} title="Refrescar">
+          <button className="yk-header-btn" onClick={() => setPreviewKey(k => k + 1)} title="Refrescar">
             <RefreshCw size={16} />
           </button>
-          <button className="yk-header-btn" onClick={() => setShowSettings(true)} title="Configuración">
+          <button className="yk-header-btn" onClick={() => setShowSettings(true)} title="Config">
             <Settings size={16} />
           </button>
           <button 
             className={`yk-push-btn ${pushing ? "yk-pushing" : ""}`} 
             onClick={pushToGitHub}
-            disabled={pushing || !githubConfig?.configured}
+            disabled={pushing || !githubConfig?.tokenSet}
           >
-            {pushing ? <Loader2 size={16} className="yk-spin" /> : <Upload size={16} />}
+            {pushing ? <Loader2 size={14} className="yk-spin" /> : <Upload size={14} />}
             <span className="yk-push-text">Push</span>
           </button>
         </div>
@@ -502,18 +483,20 @@ export default function Yuki() {
       <div className="yk-main">
         {/* Chat Panel */}
         <div className={`yk-chat ${mobileMenuOpen ? 'yk-chat-open' : ''}`}>
-          {/* Mobile close button */}
           <button className="yk-mobile-close" onClick={() => setMobileMenuOpen(false)}>
-            <ChevronLeft size={20} />
+            <ChevronLeft size={18} />
           </button>
           
           <div className="yk-chat-header">
             <div className="yk-chat-title">
-              <span className="yk-avatar">雪</span>
-              <span>Yuki</span>
+              <div className="yk-avatar">雪</div>
+              <div>
+                <span className="yk-chat-name">Yuki</span>
+                <span className="yk-chat-status">Autónomo • {activeProvider?.model || "Sin IA"}</span>
+              </div>
             </div>
             {messages.length > 0 && (
-              <button className="yk-clear-btn" onClick={clearChat} title="Limpiar">
+              <button className="yk-clear-btn" onClick={() => setMessages([])} title="Limpiar">
                 <Trash2 size={14} />
               </button>
             )}
@@ -523,45 +506,59 @@ export default function Yuki() {
             {messages.length === 0 ? (
               <div className="yk-empty">
                 <div className="yk-empty-icon">雪</div>
-                <h3>Hola, soy Yuki</h3>
-                <p>Tu asistente de código con control total</p>
+                <h3>Yuki IDE</h3>
+                <p>Dime qué quieres y lo haré automáticamente</p>
                 <div className="yk-quick-actions">
-                  <div className="yk-quick-grid">
-                    <button onClick={() => setInput("Cambia el color a azul")}>
-                      <Sparkles size={14} />
-                      <span>Cambia el color</span>
+                  {[
+                    { icon: Sparkles, text: "Cambia el color principal a azul" },
+                    { icon: FileCode, text: "Muestra la estructura del proyecto" },
+                    { icon: Zap, text: "Optimiza el rendimiento" },
+                  ].map((q, i) => (
+                    <button key={i} onClick={() => setInput(q.text)}>
+                      <q.icon size={14} />
+                      <span>{q.text}</span>
                     </button>
-                    <button onClick={() => setInput("Muestra la estructura del proyecto")}>
-                      <FolderTree size={14} />
-                      <span>Estructura</span>
-                    </button>
-                    <button onClick={() => setInput("Optimiza el código CSS")}>
-                      <Code size={14} />
-                      <span>Optimizar CSS</span>
-                    </button>
-                    <button onClick={() => setInput("Ejecuta un comando en terminal")}>
-                      <TerminalIcon size={14} />
-                      <span>Terminal</span>
-                    </button>
-                  </div>
+                  ))}
                 </div>
               </div>
             ) : (
               messages.map((msg, i) => (
                 <div key={i} className={`yk-msg yk-msg-${msg.role} ${msg.isThinking ? "yk-thinking" : ""}`}>
+                  {msg.attachments && msg.attachments.length > 0 && (
+                    <div className="yk-msg-attachments">
+                      {msg.attachments.map((a, j) => (
+                        <div key={j} className="yk-attachment-chip">
+                          <Paperclip size={12} />
+                          <span>{a.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {msg.isThinking ? (
-                    <div className="yk-thinking-dots"><span/><span/><span/></div>
+                    <div className="yk-thinking-indicator">
+                      <div className="yk-thinking-dots"><span/><span/><span/></div>
+                      {currentTool && <span className="yk-thinking-tool">{currentTool}</span>}
+                    </div>
                   ) : (
                     <>
                       {msg.toolCalls && msg.toolCalls.length > 0 && (
                         <div className="yk-tools">
-                          {msg.toolCalls.slice(0, 3).map((t, j) => (
-                            <span key={j} className="yk-tool">{t.name}</span>
+                          {msg.toolCalls.map((t, j) => (
+                            <span key={j} className="yk-tool">
+                              <Zap size={10} />
+                              {t.name}
+                            </span>
                           ))}
-                          {msg.toolCalls.length > 3 && <span className="yk-tool">+{msg.toolCalls.length - 3}</span>}
                         </div>
                       )}
-                      <div className="yk-msg-content" dangerouslySetInnerHTML={{ __html: msg.role === "assistant" ? renderMarkdown(msg.content) : msg.content.replace(/\n/g, "<br/>") }} />
+                      <div 
+                        className="yk-msg-content" 
+                        dangerouslySetInnerHTML={{ 
+                          __html: msg.role === "assistant" 
+                            ? renderMarkdown(msg.content) 
+                            : msg.content.replace(/\n/g, "<br/>") 
+                        }} 
+                      />
                     </>
                   )}
                 </div>
@@ -570,13 +567,61 @@ export default function Yuki() {
             <div ref={messagesEndRef} />
           </div>
           
+          {/* Attachments preview */}
+          {attachments.length > 0 && (
+            <div className="yk-attachments-bar">
+              {attachments.map((a, i) => (
+                <div key={i} className="yk-attachment-preview">
+                  <span>{a.name}</span>
+                  <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))}>
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          
           <div className="yk-chat-input">
+            <div className="yk-input-actions">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                multiple
+                accept="image/*,.pdf,.txt,.json,.csv"
+                style={{ display: "none" }}
+              />
+              <button 
+                className="yk-input-action" 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                title="Adjuntar archivo"
+              >
+                {uploading ? <Loader2 size={16} className="yk-spin" /> : <Paperclip size={16} />}
+              </button>
+              <button 
+                className="yk-input-action" 
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "image/*";
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) uploadFile(file);
+                  };
+                  input.click();
+                }}
+                title="Adjuntar imagen"
+              >
+                <Image size={16} />
+              </button>
+            </div>
             <textarea
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Escribe lo que quieres hacer..."
+              placeholder="Dime qué hacer..."
               rows={1}
             />
             <button onClick={sendMessage} disabled={loading || !input.trim()} className="yk-send-btn">
@@ -589,19 +634,12 @@ export default function Yuki() {
         {!focusMode && (
           <div className="yk-panel">
             <div className="yk-panel-tabs">
-              {[
-                { id: "preview", icon: Eye, label: "Preview" },
-                { id: "terminal", icon: Terminal, label: "Terminal" },
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  className={`yk-tab ${activePanel === tab.id ? "yk-tab-active" : ""}`}
-                  onClick={() => setActivePanel(tab.id as any)}
-                >
-                  <tab.icon size={14} />
-                  <span>{tab.label}</span>
-                </button>
-              ))}
+              <button className={`yk-tab ${activePanel === "preview" ? "yk-tab-active" : ""}`} onClick={() => setActivePanel("preview")}>
+                <Eye size={14} /><span>Preview</span>
+              </button>
+              <button className={`yk-tab ${activePanel === "terminal" ? "yk-tab-active" : ""}`} onClick={() => setActivePanel("terminal")}>
+                <Terminal size={14} /><span>Terminal</span>
+              </button>
               <div className="yk-tab-spacer" />
               {activePanel === "preview" && (
                 <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="yk-tab-action">
@@ -611,14 +649,12 @@ export default function Yuki() {
             </div>
 
             <div className="yk-panel-content">
-              {/* Preview */}
               {activePanel === "preview" && (
                 <div className="yk-preview">
                   <iframe key={previewKey} src={previewUrl} title="Preview" />
                 </div>
               )}
 
-              {/* Terminal */}
               {activePanel === "terminal" && (
                 <div className="yk-terminal">
                   <div className="yk-terminal-output">
@@ -636,7 +672,7 @@ export default function Yuki() {
                       value={terminalInput}
                       onChange={e => setTerminalInput(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && runTerminalCommand()}
-                      placeholder="Escribe un comando..."
+                      placeholder="Comando..."
                       disabled={runningCmd}
                     />
                     <button onClick={runTerminalCommand} disabled={runningCmd || !terminalInput.trim()}>
@@ -655,104 +691,105 @@ export default function Yuki() {
         <div className="yk-modal-overlay" onClick={() => setShowSettings(false)}>
           <div className="yk-modal yk-modal-lg" onClick={e => e.stopPropagation()}>
             <div className="yk-modal-header">
-              <div className="yk-modal-tabs">
-                <button 
-                  className={settingsTab === "github" ? "active" : ""} 
-                  onClick={() => setSettingsTab("github")}
-                >
-                  <Github size={14} /> Configuración
-                </button>
-                <button 
-                  className={settingsTab === "repos" ? "active" : ""} 
-                  onClick={() => setSettingsTab("repos")}
-                >
-                  <FolderTree size={14} /> Repositorios
-                </button>
-              </div>
+              <h3><Bot size={18} /> Configuración de IA</h3>
               <button onClick={() => setShowSettings(false)}><X size={18} /></button>
             </div>
             
-            {settingsTab === "github" && (
-              <>
-                <div className="yk-modal-body">
-                  <label>URL del Repositorio</label>
-                  <input
-                    type="text"
-                    value={repoUrl}
-                    onChange={e => setRepoUrl(e.target.value)}
-                    placeholder="https://github.com/user/repo"
-                  />
-                  {githubConfig?.repoUrl && <span className="yk-hint">Actual: {githubConfig.repoUrl}</span>}
-                  
-                  <label>Personal Access Token</label>
-                  <input
-                    type="password"
-                    value={githubToken}
-                    onChange={e => setGithubToken(e.target.value)}
-                    placeholder="ghp_xxxxxxxxxxxx"
-                  />
-                  {githubConfig?.tokenSet && <span className="yk-hint">Configurado: {githubConfig.tokenPreview}</span>}
-                  
-                  {githubConfig?.lastPush && (
-                    <>
-                      <label>Último push</label>
-                      <span className="yk-hint">{new Date(githubConfig.lastPush).toLocaleString("es-MX")}</span>
-                    </>
+            <div className="yk-modal-body">
+              {/* Provider list */}
+              <div className="yk-providers-list">
+                <label>Proveedores de IA</label>
+                {config?.providers.map(p => (
+                  <div key={p.id} className={`yk-provider-item ${p.id === config.activeProviderId ? 'active' : ''}`}>
+                    <button className="yk-provider-select" onClick={() => setActiveProvider(p.id)}>
+                      <Cpu size={16} />
+                      <div className="yk-provider-info">
+                        <span className="yk-provider-name">{p.name}</span>
+                        <span className="yk-provider-model">{p.model}</span>
+                      </div>
+                      {p.id === config.activeProviderId && <Check size={16} className="yk-provider-check" />}
+                    </button>
+                    <div className="yk-provider-actions">
+                      <button onClick={() => {
+                        setEditingProvider(p);
+                        setNewProviderForm({ name: p.name, model: p.model, apiKey: "", baseUrl: p.baseUrl || "" });
+                      }} title="Editar">
+                        <Key size={14} />
+                      </button>
+                      {config.providers.length > 1 && (
+                        <button onClick={() => deleteProvider(p.id)} title="Eliminar">
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add/Edit provider form */}
+              <div className="yk-provider-form">
+                <label>{editingProvider ? "Editar proveedor" : "Agregar nuevo proveedor"}</label>
+                <input
+                  type="text"
+                  placeholder="Nombre (ej: GPT-4, Claude)"
+                  value={newProviderForm.name}
+                  onChange={e => setNewProviderForm(prev => ({ ...prev, name: e.target.value }))}
+                />
+                <input
+                  type="text"
+                  placeholder="Modelo (ej: gpt-4-turbo, claude-3-opus)"
+                  value={newProviderForm.model}
+                  onChange={e => setNewProviderForm(prev => ({ ...prev, model: e.target.value }))}
+                />
+                <input
+                  type="password"
+                  placeholder="API Key"
+                  value={newProviderForm.apiKey}
+                  onChange={e => setNewProviderForm(prev => ({ ...prev, apiKey: e.target.value }))}
+                />
+                <input
+                  type="text"
+                  placeholder="Base URL (opcional, ej: https://api.openai.com/v1)"
+                  value={newProviderForm.baseUrl}
+                  onChange={e => setNewProviderForm(prev => ({ ...prev, baseUrl: e.target.value }))}
+                />
+                <div className="yk-form-actions">
+                  {editingProvider && (
+                    <button className="yk-btn-secondary" onClick={() => {
+                      setEditingProvider(null);
+                      setNewProviderForm({ name: "", model: "", apiKey: "", baseUrl: "" });
+                    }}>
+                      Cancelar
+                    </button>
                   )}
-                </div>
-                <div className="yk-modal-footer">
-                  <button className="yk-btn-secondary" onClick={() => setShowSettings(false)}>Cancelar</button>
-                  <button className="yk-btn-primary" onClick={saveGitHubConfig}>
-                    <Check size={14} /> Guardar
+                  <button className="yk-btn-primary" onClick={saveProvider} disabled={!newProviderForm.name || !newProviderForm.model}>
+                    <Plus size={14} />
+                    {editingProvider ? "Actualizar" : "Agregar"}
                   </button>
                 </div>
-              </>
-            )}
-            
-            {settingsTab === "repos" && (
-              <>
-                <div className="yk-modal-body">
-                  <label>Agregar nuevo repositorio</label>
-                  <div className="yk-repo-add">
-                    <input
-                      type="text"
-                      value={newRepoUrl}
-                      onChange={e => setNewRepoUrl(e.target.value)}
-                      placeholder="https://github.com/user/repo"
-                    />
-                    <button onClick={cloneRepo} disabled={cloning || !newRepoUrl.trim()}>
-                      {cloning ? <Loader2 size={14} className="yk-spin" /> : <Plus size={14} />}
+              </div>
+
+              {/* Presets */}
+              <div className="yk-presets">
+                <label>Presets populares</label>
+                <div className="yk-preset-buttons">
+                  {[
+                    { name: "OpenAI GPT-4", model: "gpt-4-turbo", baseUrl: "https://api.openai.com/v1" },
+                    { name: "Claude 3", model: "claude-3-opus-20240229", baseUrl: "https://api.anthropic.com/v1" },
+                    { name: "DeepSeek", model: "deepseek-coder", baseUrl: "https://api.deepseek.com" },
+                    { name: "Groq", model: "llama-3.1-70b-versatile", baseUrl: "https://api.groq.com/openai/v1" },
+                  ].map(preset => (
+                    <button key={preset.name} onClick={() => setNewProviderForm({ ...preset, apiKey: "" })}>
+                      {preset.name}
                     </button>
-                  </div>
-                  
-                  <label>Repositorios guardados</label>
-                  <div className="yk-repo-list">
-                    {savedRepos.length === 0 ? (
-                      <div className="yk-repo-empty">Sin repositorios guardados</div>
-                    ) : (
-                      savedRepos.map((repo, i) => (
-                        <div 
-                          key={i} 
-                          className={`yk-repo-item ${githubConfig?.repoUrl === repo.url ? 'active' : ''}`}
-                        >
-                          <button className="yk-repo-select" onClick={() => selectRepo(repo.url)}>
-                            <Github size={14} />
-                            <span>{repo.name}</span>
-                            {githubConfig?.repoUrl === repo.url && <Check size={14} className="yk-repo-check" />}
-                          </button>
-                          <button className="yk-repo-remove" onClick={() => removeRepoFromList(repo.url)}>
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  ))}
                 </div>
-                <div className="yk-modal-footer">
-                  <button className="yk-btn-secondary" onClick={() => setShowSettings(false)}>Cerrar</button>
-                </div>
-              </>
-            )}
+              </div>
+            </div>
+
+            <div className="yk-modal-footer">
+              <button className="yk-btn-secondary" onClick={() => setShowSettings(false)}>Cerrar</button>
+            </div>
           </div>
         </div>
       )}
