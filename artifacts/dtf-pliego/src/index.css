@@ -5858,36 +5858,30 @@ input[type="number"] {
 
 /* ═══════════════════════════════════════════════════════════════════════════════
 
-/* ═══════════════════════════════════════════════════════════════════════════════
-   YUKI IDE - Professional Dark Theme (Railway Optimized)
-   ═══════════════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════════
+   YUKI IDE - Minimalist Design System (Railway Optimized)
+   ══════════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --yk-bg: #0d0d0f;
-  --yk-bg-secondary: #141418;
-  --yk-bg-tertiary: #1a1a1f;
-  --yk-border: rgba(255, 255, 255, 0.08);
-  --yk-border-hover: rgba(255, 255, 255, 0.15);
-  --yk-text: #f4f4f5;
-  --yk-text-muted: #71717a;
-  --yk-text-dimmed: #52525b;
-  --yk-accent: #8b5cf6;
-  --yk-accent-hover: #7c3aed;
-  --yk-accent-glow: rgba(139, 92, 246, 0.15);
-  --yk-success: #10b981;
+  --yk-bg: #0a0a0a;
+  --yk-bg-elevated: #111111;
+  --yk-bg-subtle: #0f0f0f;
+  --yk-border: #1a1a1a;
+  --yk-border-strong: #2a2a2a;
+  --yk-text: #ffffff;
+  --yk-text-secondary: #999999;
+  --yk-text-tertiary: #666666;
+  --yk-accent: #7c3aed;
+  --yk-accent-hover: #6d28d9;
+  --yk-success: #22c55e;
   --yk-error: #ef4444;
   --yk-warning: #f59e0b;
 }
 
+/* Minimal animations - only essential */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
-@keyframes scaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-@keyframes typing { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-3px); opacity: 1; } }
-@keyframes glow { 0%, 100% { box-shadow: 0 0 10px var(--yk-accent-glow); } 50% { box-shadow: 0 0 20px var(--yk-accent-glow); } }
 
 .yk-spin { animation: spin 1s linear infinite; }
 
@@ -5910,14 +5904,17 @@ input[type="number"] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 56px;
-  padding: 0 20px;
-  background: linear-gradient(180deg, rgba(20, 20, 24, 0.98) 0%, rgba(13, 13, 15, 0.95) 100%);
-  backdrop-filter: blur(20px) saturate(180%);
+  height: 48px;
+  padding: 0 16px;
+  background: var(--yk-bg-elevated);
   border-bottom: 1px solid var(--yk-border);
-  position: relative;
-  z-index: 50;
-  box-shadow: 0 1px 0 0 rgba(139, 92, 246, 0.05);
+}
+
+.yk-header-left,
+.yk-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .yk-header-left, .yk-header-right {
@@ -5949,25 +5946,35 @@ input[type="number"] {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--yk-text);
   cursor: pointer;
-  transition: opacity 0.2s;
 }
 
-.yk-logo:hover { opacity: 0.7; }
+.yk-logo:hover { 
+  opacity: 0.7; 
+}
 
 .yk-logo-icon {
-  font-size: 22px;
-  background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #6366f1 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: bounce 3s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.4));
+  font-size: 18px;
 }
 
-.yk-logo-text {
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.3px;
+.yk-provider-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--yk-bg-subtle);
+  border: 1px solid var(--yk-border);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--yk-text-secondary);
+  cursor: pointer;
+}
+
+.yk-provider-badge:hover {
+  border-color: var(--yk-border-strong);
 }
 
 .yk-git-badge {
@@ -5998,47 +6005,44 @@ input[type="number"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   background: transparent;
   border: 1px solid var(--yk-border);
-  border-radius: 8px;
-  color: var(--yk-text-muted);
+  border-radius: 6px;
+  color: var(--yk-text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 
 .yk-header-btn:hover, .yk-header-btn.active {
-  background: rgba(139, 92, 246, 0.1);
-  border-color: rgba(139, 92, 246, 0.3);
-  color: var(--yk-accent);
+  border-color: var(--yk-border-strong);
+  background: var(--yk-bg-subtle);
+  color: var(--yk-text);
 }
 
 .yk-push-btn {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 16px;
-  height: 38px;
-  background: linear-gradient(135deg, var(--yk-accent) 0%, var(--yk-accent-hover) 100%);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  border-radius: 10px;
+  gap: 6px;
+  padding: 0 12px;
+  height: 32px;
+  background: var(--yk-accent);
+  border: none;
+  border-radius: 6px;
   color: white;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px -2px rgba(139, 92, 246, 0.3);
+  transition: all 0.15s;
 }
 
 .yk-push-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px -2px rgba(139, 92, 246, 0.5);
-  border-color: rgba(139, 92, 246, 0.5);
+  background: var(--yk-accent-hover);
 }
 
-.yk-push-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.yk-pushing { opacity: 0.8; }
+.yk-push-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.yk-pushing { opacity: 0.7; }
 
 /* ══════════════════════════════════════════════════════════════════════════════
    TOAST
