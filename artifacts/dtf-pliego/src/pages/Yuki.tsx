@@ -702,12 +702,18 @@ export default function Yuki() {
                 {config?.providers.map(p => (
                   <div key={p.id} className={`yk-provider-item ${p.id === config.activeProviderId ? 'active' : ''}`}>
                     <button className="yk-provider-select" onClick={() => setActiveProvider(p.id)}>
-                      <Cpu size={16} />
+                      <div className="yk-provider-icon">
+                        <Cpu size={16} />
+                      </div>
                       <div className="yk-provider-info">
                         <span className="yk-provider-name">{p.name}</span>
                         <span className="yk-provider-model">{p.model}</span>
                       </div>
-                      {p.id === config.activeProviderId && <Check size={16} className="yk-provider-check" />}
+                      {p.id === config.activeProviderId && (
+                        <div className="yk-provider-check">
+                          <Check size={16} />
+                        </div>
+                      )}
                     </button>
                     <div className="yk-provider-actions">
                       <button onClick={() => {
