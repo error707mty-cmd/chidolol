@@ -679,7 +679,7 @@ export default function AdminAsistente() {
               </div>
 
               <div className="aia-messages">
-                {messages.length === 0 && (
+                {trabajoMessages.length === 0 && (
                   <div className="aia-empty">
                     <div style={{ width: "60px", height: "60px", background: "linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", marginBottom: "12px", boxShadow: "0 4px 20px rgba(139, 92, 246, 0.3)" }}>雪</div>
                     <h3>Yuki lista para trabajar 🌸</h3>
