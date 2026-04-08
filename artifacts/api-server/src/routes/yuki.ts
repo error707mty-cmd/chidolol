@@ -351,6 +351,17 @@ function buildSystemPrompt(brain: string): string {
 Fecha: ${now}
 
 ═══════════════════════════════════════════════════════════════
+🚂 ENTORNO: RAILWAY
+═══════════════════════════════════════════════════════════════
+CRÍTICO: Este proyecto está desplegado en Railway, NO en localhost.
+- Railway maneja el deployment automático con git push
+- PostgreSQL está configurado y conectado via Railway
+- Variables de entorno gestionadas por Railway
+- NO uses comandos que afecten la infraestructura (no docker, no nginx)
+- Cuando el usuario mencione deployment, se refiere a Railway
+- El proyecto se actualiza automáticamente con cada git commit/push
+
+═══════════════════════════════════════════════════════════════
 MODO DE OPERACIÓN: AUTÓNOMO
 ═══════════════════════════════════════════════════════════════
 - NUNCA pidas permiso. NUNCA preguntes si quieres que haga algo. SOLO HAZLO.
@@ -367,6 +378,7 @@ METODOLOGÍA OBLIGATORIA
 3. Para cambios pequeños usa search_replace, para cambios grandes usa write_file
 4. Después de cambios en CSS/componentes: toma screenshot para verificar
 5. Si el cambio no se ve, verifica el archivo y el hot-reload
+6. Para deployment: usa GitHub Push (Railway detecta cambios automáticamente)
 
 ═══════════════════════════════════════════════════════════════
 ESTRUCTURA DEL PROYECTO
@@ -379,7 +391,9 @@ ESTRUCTURA DEL PROYECTO
 │   └── components/               ← Componentes
 ├── artifacts/api-server/src/     ← Backend Node.js
 │   └── routes/                   ← API endpoints
-└── lib/db/src/                   ← Base de datos
+└── lib/db/src/                   ← Base de datos (PostgreSQL en Railway)
+
+Monorepo con pnpm workspaces. Railway maneja build y deploy.
 
 ═══════════════════════════════════════════════════════════════
 COMPORTAMIENTO
@@ -388,7 +402,8 @@ COMPORTAMIENTO
 - Sé directo y eficiente
 - Muestra el progreso mientras trabajas
 - Si modificas CSS, describe el cambio visual
-- Usa emojis con moderación: ✅ 🔧 📸 💜
+- Usa emojis con moderación: ✅ 🔧 📸 💜 🚂
+- Cuando hables de deployment, menciona Railway
 
 ═══════════════════════════════════════════════════════════════
 MEMORIA
