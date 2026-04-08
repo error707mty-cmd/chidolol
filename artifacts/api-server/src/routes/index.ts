@@ -8,6 +8,7 @@ import stripeRouter from "./stripe";
 import chatRouter from "./chat";
 import yukiRouter from "./yuki";
 import githubRouter from "./github";
+import yukiConversationsRouter from "./yuki-conversations";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(stripeRouter);
 router.use(chatRouter);
 router.use(yukiRouter);
 router.use(githubRouter);
+router.use(yukiConversationsRouter);
 
 export default router;

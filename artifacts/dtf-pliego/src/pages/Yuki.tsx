@@ -240,6 +240,55 @@ export default function Yuki() {
     } catch {}
   };
 
+  // Load conversation from backend
+  const loadConversation = async () => {
+    if (conversationLoaded) return;
+    try {
+      const res = await fetch(`${API_BASE}/yuki-conversations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.messages && data.messages.length > 0) {
+          setMessages(data.messages);
+          showToast("success", `${data.messages.length} mensajes cargados`);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading conversation:", err);
+    }
+    setConversationLoaded(true);
+  };
+
+  // Save conversation to backend (debounced)
+  const saveConversation = async (msgs: Message[]) => {
+    try {
+      await fetch(`${API_BASE}/yuki-conversations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ messages: msgs }),
+      });
+    } catch (err) {
+      console.error("Error saving conversation:", err);
+    }
+  };
+
+  // Clear conversation
+  const clearConversation = async () => {
+    if (!confirm("¿Estás seguro de que quieres borrar toda la conversación?")) return;
+    try {
+      await fetch(`${API_BASE}/yuki-conversations`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMessages([]);
+      showToast("success", "Conversación eliminada");
+    } catch {}
+  };
+
   const saveGitHubConfig = async () => {
     try {
       const res = await fetch(`${API_BASE}/github/config`, {
