@@ -7116,6 +7116,66 @@ input[type="number"] {
 }
 
 .yk-thinking-text {
+
+/* Loading Bar - Minimalista */
+.yk-loading-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: var(--yk-bg-elevated);
+  border-bottom: 1px solid var(--yk-border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  z-index: 10;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.yk-loading-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--yk-accent), var(--yk-accent-hover));
+  transition: width 0.3s ease;
+}
+
+.yk-loading-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--yk-text-secondary);
+  font-weight: 500;
+  padding-top: 2px;
+}
+
+.yk-loading-icon {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.yk-input-wrapper {
+  position: relative;
+  padding-top: 0;
+  transition: padding-top 0.2s ease;
+}
+
+.yk-input-wrapper:has(.yk-loading-bar) {
+  padding-top: 32px;
+}
+
   font-size: 12px;
   color: var(--yk-text-tertiary);
   font-weight: 500;

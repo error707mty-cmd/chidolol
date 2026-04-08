@@ -38,6 +38,27 @@ interface YukiConfig {
 // Markdown renderer
 function renderMarkdown(text: string): string {
   const codeBlocks: string[] = [];
+
+  // Mapeo de tools a labels amigables
+  const getToolLabel = (toolName: string): string => {
+    const labels: Record<string, string> = {
+      read_file: "Leyendo archivo",
+      write_file: "Escribiendo archivo",
+      list_files: "Listando archivos",
+      search_replace: "Modificando código",
+      exec_shell: "Ejecutando comando",
+      screenshot: "Tomando captura",
+      search_in_files: "Buscando en archivos",
+      get_app_stats: "Obteniendo estadísticas",
+      execute_sql: "Consultando base de datos",
+      read_knowledge: "Leyendo memoria",
+      update_knowledge: "Guardando en memoria",
+      install_package: "Instalando paquete",
+      restart_backend: "Reiniciando backend",
+    };
+    return labels[toolName] || toolName;
+  };
+
   let result = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_m, _lang, code) => {
     const idx = codeBlocks.length;
     codeBlocks.push(`<pre class="yk-code"><code>${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`);
@@ -94,6 +115,27 @@ export default function Yuki() {
   // Preview - usar ruta absoluta para evitar recursión en Railway
   const [previewUrl, setPreviewUrl] = useState("/");
   const [previewKey, setPreviewKey] = useState(0);
+  
+  // Auto-refresh preview manteniendo scroll
+  const refreshPreview = () => {
+    // Guardar posición de scroll antes de refrescar
+    if (previewIframeRef.current?.contentWindow) {
+      try {
+        const iframe = previewIframeRef.current.contentWindow;
+        setPreviewScrollPos({ x: iframe.scrollX, y: iframe.scrollY });
+      } catch {}
+    }
+    setPreviewKey(prev => prev + 1);
+  };
+  
+  // Restaurar scroll después de cargar
+  const handlePreviewLoad = () => {
+    if (previewIframeRef.current?.contentWindow && (previewScrollPos.x !== 0 || previewScrollPos.y !== 0)) {
+      try {
+        previewIframeRef.current.contentWindow.scrollTo(previewScrollPos.x, previewScrollPos.y);
+      } catch {}
+    }
+  };
   const [focusMode, setFocusMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
