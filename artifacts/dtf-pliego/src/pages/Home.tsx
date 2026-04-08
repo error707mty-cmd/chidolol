@@ -190,7 +190,7 @@ function HomeInner() {
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-7 w-7 animate-spin text-primary" />
-          <p className="text-xs text-muted-foreground">Cargando...</p>
+          <p className="text-xs text-muted-foreground">Cargando... Prueba de flujo Railway ✓</p>
         </div>
       </div>
     );

@@ -89,3 +89,41 @@ Cuando uses el botón "Push", los cambios van directo a GitHub y Railway los det
 - Base de datos: PostgreSQL en Railway
 
 **Sistema listo para desarrollo autónomo.**
+
+---
+## Prueba de Flujo Railway
+*Actualizado: 8/4/2026, 5:01:58 p.m.*
+
+## Prueba de Flujo Railway Completa
+*Realizada: 8/4/2026, 5:01:00 p.m.*
+
+### ✅ Flujo Verificado:
+1. **Lectura de archivos**: OK - Leído App.tsx y Home.tsx
+2. **Modificación de frontend**: OK - Cambiado texto de carga en Home.tsx
+3. **Hot reload**: OK - Frontend corriendo en localhost:3000
+4. **Backend acceso**: OK - Leído index.ts del backend
+5. **Estadísticas**: OK - 1 usuario, 1 pliego, 0 uploads
+6. **Comandos shell**: OK - pwd, ls, curl funcionando
+7. **Memoria persistente**: OK - Lectura y escritura funcionando
+
+### 📁 Estructura Confirmada:
+- **Frontend**: `/artifacts/dtf-pliego` (React + Vite)
+- **Backend**: `/artifacts/api-server` (Node.js + Express)
+- **Base de datos**: PostgreSQL en Railway funcionando
+
+### 🔧 Herramientas Probadas:
+- ✅ `list_files` - Directorios y estructura
+- ✅ `read_file` - Contenido de archivos
+- ✅ `search_replace` - Modificación de código
+- ✅ `exec_shell` - Comandos del sistema
+- ✅ `get_app_stats` - Estadísticas de DB
+- ✅ `read_knowledge` - Memoria persistente
+- ✅ `update_knowledge` - Actualización de memoria
+
+### 🚀 Sistema Listo:
+- Frontend: Hot reload activo
+- Backend: Servidor corriendo
+- Railway: Deployment automático configurado
+- GitHub: Integración lista para push
+
+**Conclusión**: Flujo de desarrollo autónomo completamente funcional en Railway.

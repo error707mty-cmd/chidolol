@@ -6676,24 +6676,37 @@ input[type="number"] {
   transition: all 0.2s;
 }
 
-.yk-btn-secondary:hover { background: rgba(255,255,255,0.03); color: var(--yk-text); }
+.yk-btn-secondary:hover:not(:disabled) {
+  background: rgba(255,255,255,0.06);
+  color: var(--yk-text);
+  border-color: var(--yk-border-strong);
+}
 
 .yk-btn-primary {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 8px 14px;
+  gap: 6px;
+  padding: 10px 16px;
   background: linear-gradient(135deg, var(--yk-accent), var(--yk-accent-hover));
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   color: white;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
 }
 
-.yk-btn-primary:hover { transform: translateY(-1px); }
+.yk-btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.yk-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* Repo add */
 .yk-repo-add {
@@ -7074,10 +7087,20 @@ input[type="number"] {
 
 .yk-provider-form input {
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--yk-border);
   border-radius: 8px;
   color: var(--yk-text);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.yk-provider-form input:focus {
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
 
 /* Thinking Bar - Minimalista */
 .yk-thinking-bar {
@@ -7152,17 +7175,22 @@ input[type="number"] {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: var(--yk-text-secondary);
+  color: var(--yk-accent);
   font-weight: 500;
   padding-top: 2px;
 }
 
 .yk-loading-icon {
-  animation: pulse 1.5s ease-in-out infinite;
+  animation: loadingBounce 1s ease-in-out infinite;
+}
+
+@keyframes loadingBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.4; }
+  0%, 100% { opacity: 0.5; }
   50% { opacity: 1; }
 }
 
@@ -7223,7 +7251,7 @@ input[type="number"] {
 
 .yk-github-form input {
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--yk-border);
   border-radius: 8px;
   color: var(--yk-text);
@@ -7233,8 +7261,9 @@ input[type="number"] {
 }
 
 .yk-github-form input:focus {
-  border-color: rgba(139, 92, 246, 0.4);
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .yk-github-help {
@@ -7266,11 +7295,19 @@ input[type="number"] {
 
 .yk-github-help code {
   padding: 2px 6px;
-  background: rgba(139, 92, 246, 0.15);
+  background: rgba(139, 92, 246, 0.18);
   border-radius: 4px;
-  color: var(--yk-accent);
+  color: #c4b5fd;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
+  font-weight: 600;
+}
+
+.yk-hint {
+  font-size: 11px;
+  color: var(--yk-text-muted);
+  margin-top: -8px;
+  opacity: 0.7;
 }
 
 
@@ -7290,30 +7327,42 @@ input[type="number"] {
 .yk-presets {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.yk-presets label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--yk-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .yk-preset-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .yk-preset-buttons button {
-  padding: 6px 12px;
+  padding: 8px 14px;
   background: rgba(139, 92, 246, 0.08);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 6px;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 8px;
   color: var(--yk-accent);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .yk-preset-buttons button:hover {
-  background: rgba(139, 92, 246, 0.15);
+  background: rgba(139, 92, 246, 0.18);
+  border-color: rgba(139, 92, 246, 0.4);
   transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
 }
 
 @media (max-width: 480px) {
