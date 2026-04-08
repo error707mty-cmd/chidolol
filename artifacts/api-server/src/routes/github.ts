@@ -36,11 +36,13 @@ function requireYukiAccess(
 
 // ── GitHub config file path ────────────────────────────────────────────────────
 const GITHUB_CONFIG_FILE = path.join(WORKSPACE_ROOT, "artifacts/api-server/.github-config.json");
+const REPOS_DIR = "/app/yuki-repos"; // Directorio para repos clonados
 
 interface GitHubConfig {
   repoUrl: string;
   token: string;
   lastPush?: string;
+  clonedPath?: string; // Ruta donde se clonó el repo
 }
 
 async function loadGitHubConfig(): Promise<GitHubConfig | null> {
