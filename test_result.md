@@ -58,9 +58,25 @@ This file tracks all testing iterations and results for the ERROR707 DTF Studio 
 - [ ] Real-time preview refresh after code changes
 
 ## Known Issues
-None identified yet in this iteration.
+
+### RESOLVED ✅
+1. **Page reload on chat submission** (P0) - FIXED
+   - Added `e.preventDefault()` in sendMessage function
+   - Converted chat input to `<form onSubmit={sendMessage}>`
+   - Added missing refs: `previewIframeRef`, `previewScrollPos`
+   - Removed undefined `toolProgress` variable
+
+2. **GitHub cloning architecture** (P1) - FIXED
+   - Implemented `getClonedRepoPath()` helper function
+   - Created `/api/github/cloned-repo` endpoint
+   - Updated `/api/github/config` to auto-clone repos
+   - Updated `/api/github/push` to work with cloned repos in `/app/yuki-repos/`
+
+### PENDING
+1. UI spacing issue in Settings modal presets buttons (LOW priority)
 
 ## Notes
 - Previous agent made massive file overwrites without testing
 - All infrastructure issues have been resolved
-- Ready for comprehensive testing
+- Critical bugs (P0, P1) have been fixed
+- Backend restarted after code changes

@@ -19,9 +19,12 @@ const WORKSPACE_ROOT = path.resolve("/app");
 const CONFIG_FILE = path.join(WORKSPACE_ROOT, "artifacts/api-server/.yuki-config.json");
 const BRAIN_FILE = path.join(WORKSPACE_ROOT, "artifacts/api-server/yuki-brain.md");
 const UPLOADS_DIR = path.join(WORKSPACE_ROOT, "artifacts/api-server/yuki-uploads");
+const GITHUB_CONFIG_FILE = path.join(WORKSPACE_ROOT, "artifacts/api-server/.github-config.json");
+const REPOS_DIR = "/app/yuki-repos";
 
 // Ensure uploads directory exists
 fs.mkdir(UPLOADS_DIR, { recursive: true }).catch(() => {});
+fs.mkdir(REPOS_DIR, { recursive: true }).catch(() => {});
 
 // Multer config for file uploads
 const storage = multer.diskStorage({
@@ -84,6 +87,32 @@ async function loadConfig(): Promise<YukiConfig> {
 async function saveConfig(config: YukiConfig): Promise<void> {
   config.lastUpdated = new Date().toISOString();
   await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), "utf-8");
+}
+
+// Helper: Get cloned repo path from GitHub config
+async function getClonedRepoPath(): Promise<string | null> {
+  try {
+    const content = await fs.readFile(GITHUB_CONFIG_FILE, "utf-8");
+    const config = JSON.parse(content);
+    if (config.repoUrl) {
+      // Extract repo name from URL
+      const repoMatch = config.repoUrl.match(/github\.com[/:]([^/]+)\/([^/.]+)/);
+      if (repoMatch) {
+        const repoName = repoMatch[2].replace(/\.git$/, "");
+        const clonedPath = path.join(REPOS_DIR, repoName);
+        // Check if directory exists
+        try {
+          await fs.access(clonedPath);
+          return clonedPath;
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // ── Access Control ─────────────────────────────────────────────────────────────

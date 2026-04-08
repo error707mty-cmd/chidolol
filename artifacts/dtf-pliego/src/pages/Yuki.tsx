@@ -104,6 +104,7 @@ export default function Yuki() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewIframeRef = useRef<HTMLIFrameElement>(null);
   
   // Attachments
   const [attachments, setAttachments] = useState<{ name: string; type: string; path: string }[]>([]);
@@ -115,6 +116,7 @@ export default function Yuki() {
   // Preview - usar ruta absoluta para evitar recursión en Railway
   const [previewUrl, setPreviewUrl] = useState("/");
   const [previewKey, setPreviewKey] = useState(0);
+  const [previewScrollPos, setPreviewScrollPos] = useState({ x: 0, y: 0 });
   
   // Auto-refresh preview manteniendo scroll
   const refreshPreview = () => {
@@ -337,7 +339,8 @@ export default function Yuki() {
   };
 
   // Chat
-  const sendMessage = async () => {
+  const sendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const text = input.trim();
     if (!text || loading) return;
 
@@ -654,13 +657,13 @@ export default function Yuki() {
             </div>
           )}
           
-          <div className="yk-chat-input">
+          <form className="yk-chat-input" onSubmit={sendMessage}>
             {loading && (
               <div className="yk-loading-bar">
-                <div className="yk-loading-progress" style={{ width: `${toolProgress}%` }}></div>
+                <div className="yk-loading-progress"></div>
                 <div className="yk-loading-text">
                   <span className="yk-loading-icon">⚡</span>
-                  <span>{currentTool}</span>
+                  <span>{currentTool || "Procesando..."}</span>
                 </div>
               </div>
             )}
@@ -706,10 +709,10 @@ export default function Yuki() {
               placeholder="Dime qué hacer..."
               rows={1}
             />
-            <button onClick={sendMessage} disabled={loading || !input.trim()} className="yk-send-btn">
+            <button type="submit" disabled={loading || !input.trim()} className="yk-send-btn">
               {loading ? <Loader2 size={18} className="yk-spin" /> : <Send size={18} />}
             </button>
-          </div>
+          </form>
         </div>
 
         {/* Right Panel */}
@@ -733,7 +736,13 @@ export default function Yuki() {
             <div className="yk-panel-content">
               {activePanel === "preview" && (
                 <div className="yk-preview">
-                  <iframe key={previewKey} src={previewUrl} title="Preview" />
+                  <iframe 
+                    ref={previewIframeRef}
+                    key={previewKey} 
+                    src={previewUrl} 
+                    title="Preview"
+                    onLoad={handlePreviewLoad}
+                  />
                 </div>
               )}
 
