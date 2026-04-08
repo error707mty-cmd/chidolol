@@ -15,6 +15,9 @@
     "typescript": "~5.9.2"
   },
   "dependencies": {
+    "@rollup/rollup-linux-arm64-gnu": "^4.60.1",
+    "@tailwindcss/oxide-linux-arm64-gnu": "^4.2.2",
+    "lightningcss-linux-arm64-gnu": "^1.32.0",
     "stripe": "20.0.0",
     "stripe-replit-sync": "1.0.0"
   }
