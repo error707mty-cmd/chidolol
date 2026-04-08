@@ -91,6 +91,8 @@ export default function Yuki() {
   // UI
   const [activePanel, setActivePanel] = useState<"preview" | "terminal">("preview");
   const [showSettings, setShowSettings] = useState(false);
+  // Preview - usar ruta absoluta para evitar recursión en Railway
+  const [previewUrl, setPreviewUrl] = useState("/");
   const [previewKey, setPreviewKey] = useState(0);
   const [focusMode, setFocusMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -110,8 +112,6 @@ export default function Yuki() {
   // GitHub
   const [githubConfig, setGithubConfig] = useState<{ repoUrl?: string; tokenSet?: boolean } | null>(null);
   const [pushing, setPushing] = useState(false);
-
-  const previewUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   // Effects
   useEffect(() => {
