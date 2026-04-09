@@ -965,7 +965,13 @@ export default function Yuki() {
                       </div>
                       <button 
                         className="yk-preview-open-btn"
-                        onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}
+                        onClick={() => {
+                          // Construir URL completa del preview
+                          const fullUrl = previewUrl.startsWith('http') 
+                            ? previewUrl 
+                            : `${window.location.origin}${previewUrl}`;
+                          window.open(fullUrl, '_blank', 'noopener,noreferrer');
+                        }}
                       >
                         <ExternalLink size={20} />
                         <span>Abrir Preview en Nueva Pestaña</span>
@@ -1025,10 +1031,13 @@ export default function Yuki() {
             </div>
             
             <div className="yk-modal-body">
-              {/* Provider list */}
-              {config?.providers && config.providers.length > 0 ? (
-                <div className="yk-providers-list">
-                  <label style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.6)', marginBottom: '12px', textTransform: 'uppercase' }}>Selecciona tu IA</label>
+              {/* Provider list - Siempre visible */}
+              <div className="yk-providers-list">
+                <label style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.6)', marginBottom: '12px', textTransform: 'uppercase' }}>
+                  {config?.providers && config.providers.length > 0 ? 'Selecciona tu IA' : 'Tus IAs configuradas aparecerán aquí'}
+                </label>
+                
+                {config?.providers && config.providers.length > 0 ? (
                   <div className="yk-providers-grid">
                     {config.providers.map(p => (
                       <div 
@@ -1071,25 +1080,22 @@ export default function Yuki() {
                       </div>
                     ))}
                   </div>
-                </div>
-              ) : (
-                <div style={{ 
-                  padding: '24px', 
-                  background: 'rgba(59, 130, 246, 0.1)', 
-                  border: '1px solid rgba(59, 130, 246, 0.3)', 
-                  borderRadius: '12px',
-                  marginBottom: '20px',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '32px', marginBottom: '12px' }}>🤖</div>
-                  <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)', marginBottom: '8px' }}>
-                    No hay IAs configuradas
-                  </h3>
-                  <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.5' }}>
-                    Agrega tu primera IA usando uno de los presets de abajo o configura una manualmente
-                  </p>
-                </div>
-              )}
+                ) : (
+                  <div style={{ 
+                    padding: '32px 24px', 
+                    background: 'rgba(59, 130, 246, 0.08)', 
+                    border: '2px dashed rgba(59, 130, 246, 0.3)', 
+                    borderRadius: '12px',
+                    marginBottom: '20px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '40px', marginBottom: '12px' }}>🤖</div>
+                    <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: '1.6' }}>
+                      Agrega tu primera IA usando los presets de abajo
+                    </p>
+                  </div>
+                )}
+              </div>
 
               {/* Add/Edit provider form */}
               <div className="yk-provider-form">
