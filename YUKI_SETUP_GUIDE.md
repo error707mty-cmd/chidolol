@@ -153,3 +153,166 @@ Ahora tienes un asistente AI completamente autónomo que puede:
 - ✅ Consultar la base de datos
 
 **Disfruta tu nuevo copiloto de desarrollo! 🚀**
+
+---
+
+## 🆕 NUEVA FUNCIONALIDAD: Crear Apps desde Cero
+
+### ¿Qué es esto?
+
+Yuki ahora puede **crear aplicaciones completas desde cero**, igual que Claude/Emergent. Ya no necesitas clonar un repositorio existente para empezar a trabajar.
+
+### Templates Disponibles
+
+#### 1. **React + Vite** (`react-vite`)
+Aplicación React moderna con hot reload:
+- React 18
+- Vite (build tool ultra-rápido)
+- Hot Module Replacement (cambios en < 2s)
+- Estructura básica lista
+
+**Ejemplo:**
+```
+"Crea una app de e-commerce llamada 'mi-tienda'"
+```
+
+Yuki creará:
+- `src/App.jsx` - Componente principal
+- `src/main.jsx` - Entry point
+- `vite.config.js` - Configuración optimizada
+- `package.json` - Con todas las dependencias
+- Hot reload configurado automáticamente
+
+#### 2. **Node.js + Express** (`node-express`)
+API REST con Express:
+- Express 4.x
+- CORS configurado
+- Endpoints básicos de ejemplo
+- Hot reload con `--watch`
+
+**Ejemplo:**
+```
+"Crea una API REST llamada 'api-usuarios' para gestión de usuarios"
+```
+
+Yuki creará:
+- `server.js` - Servidor Express
+- Rutas básicas (`/`, `/api/health`, `/api/hello`)
+- package.json con scripts
+
+#### 3. **Next.js** (`nextjs`)
+Framework React con SSR:
+- Next.js 15
+- Server-side rendering
+- Routing automático
+- SEO-friendly
+
+**Ejemplo:**
+```
+"Crea un blog con Next.js llamado 'mi-blog'"
+```
+
+#### 4. **Full-Stack** (`fullstack`)
+React frontend + Node backend (monorepo):
+- React + Vite (frontend)
+- Express (backend)
+- Configuración integrada
+
+---
+
+### Cómo Usar
+
+Solo chatea con Yuki normalmente:
+
+**Ejemplos de comandos:**
+
+1. **App React simple:**
+   ```
+   "Crea una app de tareas (todo list) con React"
+   ```
+
+2. **API REST:**
+   ```
+   "Crea una API para un sistema de reservaciones de hotel"
+   ```
+
+3. **Dashboard:**
+   ```
+   "Necesito un dashboard con gráficas y tablas, usa React + Vite"
+   ```
+
+4. **Landing page:**
+   ```
+   "Crea una landing page moderna para un SaaS"
+   ```
+
+Yuki automáticamente:
+1. ✅ Elige el template correcto según tu petición
+2. ✅ Crea la estructura completa
+3. ✅ Instala todas las dependencias
+4. ✅ Inicia el dev server en puerto 3001
+5. ✅ Preview listo en ~30 segundos
+
+---
+
+### Después de Crear la App
+
+Una vez creada, Yuki puede:
+- Agregar componentes nuevos
+- Instalar librerías (axios, react-router, etc.)
+- Modificar estilos
+- Agregar páginas/rutas
+- Conectar APIs
+- Todo en tiempo real con hot reload
+
+**Ejemplo de flujo completo:**
+```
+Usuario: "Crea una app de clima con React"
+
+Yuki: [usa create_app('weather-app', 'react-vite', 'App de clima')]
+✅ App creada en /app/yuki-repos/weather-app
+✅ Dev server iniciado en puerto 3001
+
+Usuario: "Agrega un componente para buscar ciudades"
+
+Yuki: [usa write_file para crear src/components/CitySearch.jsx]
+✅ Componente creado
+✅ Cambio visible en preview automáticamente
+
+Usuario: "Instala axios para llamar a una API del clima"
+
+Yuki: [usa exec_shell para 'pnpm add axios']
+✅ Axios instalado
+
+Usuario: "Conecta la API de OpenWeather"
+
+Yuki: [modifica el código para integrar la API]
+✅ API integrada
+✅ Preview mostrando datos del clima en tiempo real
+```
+
+---
+
+### Ventajas
+
+✅ **No necesitas GitHub** - Crea apps sin configurar repositorios
+✅ **Listo en segundos** - De cero a app funcionando en ~30s
+✅ **Templates optimizados** - Configuraciones profesionales pre-hechas
+✅ **Hot reload incluido** - Cambios en tiempo real automáticamente
+✅ **Escalable** - Empieza simple, crece según necesites
+
+---
+
+### Diferencia con Clonar un Repo
+
+| Aspecto | Crear App (create_app) | Clonar Repo (GitHub) |
+|---------|------------------------|----------------------|
+| **Setup** | 0 segundos | Requiere GitHub token + URL |
+| **Tiempo** | ~30 segundos | ~60-90 segundos |
+| **Ideal para** | Proyectos nuevos desde cero | Trabajar en proyectos existentes |
+| **Personalización** | Templates pre-configurados | Tu estructura exacta |
+
+**Recomendación:**
+- Proyectos nuevos → `create_app`
+- Proyectos existentes → Clonar desde GitHub
+

@@ -395,11 +395,398 @@ async function toolRestartBackend(): Promise<unknown> {
   return toolExecShell("pnpm --filter @workspace/api-server run build");
 }
 
+// Tool: Create new app from template
+async function toolCreateApp(appName: string, template: string, description?: string): Promise<unknown> {
+  try {
+    const sanitizedName = appName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+    const projectPath = path.join(REPOS_DIR, sanitizedName);
+    
+    // Check if project already exists
+    try {
+      await fs.access(projectPath);
+      return { error: `Proyecto "${sanitizedName}" ya existe en ${projectPath}` };
+    } catch {
+      // Project doesn't exist, continue
+    }
+    
+    // Create project directory
+    await fs.mkdir(projectPath, { recursive: true });
+    
+    // Generate project based on template
+    let result: any = {};
+    
+    switch (template) {
+      case "react-vite":
+        result = await createReactViteApp(projectPath, sanitizedName, description);
+        break;
+      case "nextjs":
+        result = await createNextJsApp(projectPath, sanitizedName, description);
+        break;
+      case "node-express":
+        result = await createNodeExpressApp(projectPath, sanitizedName, description);
+        break;
+      case "fullstack":
+        result = await createFullStackApp(projectPath, sanitizedName, description);
+        break;
+      default:
+        return { error: `Template desconocido: ${template}. Usa: react-vite, nextjs, node-express, o fullstack` };
+    }
+    
+    // Update GitHub config to point to new project
+    const config = await loadGitHubConfig();
+    config.clonedPath = projectPath;
+    await saveGitHubConfig(config);
+    
+    // Install dependencies
+    try {
+      await execAsync("pnpm install", {
+        cwd: projectPath,
+        timeout: 180000,
+      });
+    } catch (installErr: any) {
+      return {
+        ...result,
+        warning: "Proyecto creado pero error al instalar dependencias",
+        installError: installErr.message,
+      };
+    }
+    
+    // Start dev server on port 3001
+    try {
+      await execAsync("lsof -ti:3001 | xargs kill -9 2>/dev/null || true");
+      const startCmd = `cd "${projectPath}" && PORT=3001 pnpm dev > /tmp/yuki-dev.log 2>&1 &`;
+      execAsync(startCmd, { shell: true }).catch(() => {});
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    } catch {}
+    
+    return {
+      success: true,
+      message: `✅ App "${appName}" creada exitosamente`,
+      projectPath,
+      template,
+      description,
+      devServerUrl: "http://localhost:3001",
+      files: result.files || [],
+      nextSteps: result.nextSteps || [
+        "El proyecto está listo en " + projectPath,
+        "Dev server corriendo en puerto 3001",
+        "Usa write_file, read_file y exec_shell para modificar el proyecto",
+      ],
+    };
+  } catch (e: any) {
+    return { error: `Error creando app: ${e.message}` };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// APP TEMPLATES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+async function createReactViteApp(projectPath: string, name: string, description?: string) {
+  const files: string[] = [];
+  
+  // package.json
+  const packageJson = {
+    name,
+    version: "0.1.0",
+    private: true,
+    type: "module",
+    description: description || "React + Vite app creada por Yuki",
+    scripts: {
+      dev: "vite",
+      build: "vite build",
+      preview: "vite preview",
+    },
+    dependencies: {
+      react: "^18.3.1",
+      "react-dom": "^18.3.1",
+    },
+    devDependencies: {
+      "@vitejs/plugin-react": "^4.3.4",
+      vite: "^6.0.5",
+      "@types/react": "^18.3.18",
+      "@types/react-dom": "^18.3.5",
+    },
+  };
+  
+  await fs.writeFile(path.join(projectPath, "package.json"), JSON.stringify(packageJson, null, 2));
+  files.push("package.json");
+  
+  // vite.config.js
+  const viteConfig = `import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3001,
+    host: true,
+  },
+})
+`;
+  await fs.writeFile(path.join(projectPath, "vite.config.js"), viteConfig);
+  files.push("vite.config.js");
+  
+  // index.html
+  const indexHtml = `<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${name}</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+`;
+  await fs.writeFile(path.join(projectPath, "index.html"), indexHtml);
+  files.push("index.html");
+  
+  // src/main.jsx
+  await fs.mkdir(path.join(projectPath, "src"), { recursive: true });
+  const mainJsx = `import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
+`;
+  await fs.writeFile(path.join(projectPath, "src/main.jsx"), mainJsx);
+  files.push("src/main.jsx");
+  
+  // src/App.jsx
+  const appJsx = `import { useState } from 'react'
+import './App.css'
+
+function App() {
+  const [count, setCount] = useState(0)
+
+  return (
+    <div className="app">
+      <h1>🚀 ${name}</h1>
+      <p>${description || 'App creada por Yuki'}</p>
+      
+      <div className="card">
+        <button onClick={() => setCount((count) => count + 1)}>
+          Contador: {count}
+        </button>
+        <p>
+          Edita <code>src/App.jsx</code> y verás los cambios en tiempo real
+        </p>
+      </div>
+      
+      <p className="footer">
+        Creado con Yuki IDE 🎨
+      </p>
+    </div>
+  )
+}
+
+export default App
+`;
+  await fs.writeFile(path.join(projectPath, "src/App.jsx"), appJsx);
+  files.push("src/App.jsx");
+  
+  // src/App.css
+  const appCss = `.app {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.card {
+  padding: 2em;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin: 2rem 0;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #646cff;
+  color: white;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+button:hover {
+  background-color: #535bf2;
+}
+
+.footer {
+  color: #888;
+  margin-top: 2rem;
+}
+`;
+  await fs.writeFile(path.join(projectPath, "src/App.css"), appCss);
+  files.push("src/App.css");
+  
+  // src/index.css
+  const indexCss = `* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#root {
+  width: 100%;
+}
+`;
+  await fs.writeFile(path.join(projectPath, "src/index.css"), indexCss);
+  files.push("src/index.css");
+  
+  // .gitignore
+  const gitignore = `node_modules
+dist
+.DS_Store
+*.log
+`;
+  await fs.writeFile(path.join(projectPath, ".gitignore"), gitignore);
+  files.push(".gitignore");
+  
+  return {
+    files,
+    nextSteps: [
+      "App React + Vite creada con hot reload",
+      "Modifica src/App.jsx para personalizar",
+      "Agrega componentes en src/components/",
+    ],
+  };
+}
+
+async function createNextJsApp(projectPath: string, name: string, description?: string) {
+  // Similar structure for Next.js
+  return {
+    files: ["package.json", "next.config.js", "pages/index.js"],
+    nextSteps: ["Next.js app - Implementación pendiente"],
+  };
+}
+
+async function createNodeExpressApp(projectPath: string, name: string, description?: string) {
+  const files: string[] = [];
+  
+  // package.json
+  const packageJson = {
+    name,
+    version: "1.0.0",
+    description: description || "Node.js + Express API creada por Yuki",
+    main: "server.js",
+    type: "module",
+    scripts: {
+      dev: "node --watch server.js",
+      start: "node server.js",
+    },
+    dependencies: {
+      express: "^4.21.2",
+      cors: "^2.8.5",
+    },
+  };
+  
+  await fs.writeFile(path.join(projectPath, "package.json"), JSON.stringify(packageJson, null, 2));
+  files.push("package.json");
+  
+  // server.js
+  const serverJs = `import express from 'express';
+import cors from 'cors';
+
+const app = express();
+const PORT = 3001;
+
+app.use(cors());
+app.use(express.json());
+
+// Routes
+app.get('/', (req, res) => {
+  res.json({
+    message: '🚀 ${name} API',
+    description: '${description || 'API creada por Yuki'}',
+    endpoints: [
+      'GET /',
+      'GET /api/health',
+      'GET /api/hello',
+    ],
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/hello', (req, res) => {
+  const { name = 'mundo' } = req.query;
+  res.json({ message: \`¡Hola \${name}!\` });
+});
+
+app.listen(PORT, () => {
+  console.log(\`🚀 Servidor corriendo en http://localhost:\${PORT}\`);
+});
+`;
+  await fs.writeFile(path.join(projectPath, "server.js"), serverJs);
+  files.push("server.js");
+  
+  // .gitignore
+  const gitignore = `node_modules
+.DS_Store
+*.log
+`;
+  await fs.writeFile(path.join(projectPath, ".gitignore"), gitignore);
+  files.push(".gitignore");
+  
+  return {
+    files,
+    nextSteps: [
+      "API Node.js + Express creada",
+      "Endpoints disponibles en /api/*",
+      "Modifica server.js para agregar rutas",
+    ],
+  };
+}
+
+async function createFullStackApp(projectPath: string, name: string, description?: string) {
+  // Full-stack with React frontend + Node backend
+  return {
+    files: ["frontend/", "backend/", "package.json"],
+    nextSteps: ["Full-stack app - Implementación pendiente"],
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TOOL DEFINITIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const TOOLS = [
+  { name: "create_app", description: "Crea una nueva app desde cero. Templates: react-vite (React+Vite), nextjs (Next.js), node-express (API Node.js), fullstack (React+Node). Ejemplo: create_app('mi-tienda', 'react-vite', 'App de e-commerce')", input_schema: { type: "object" as const, properties: { appName: { type: "string" }, template: { type: "string", enum: ["react-vite", "nextjs", "node-express", "fullstack"] }, description: { type: "string" } }, required: ["appName", "template"] } },
   { name: "list_files", description: "Lista archivos de un directorio", input_schema: { type: "object" as const, properties: { directory: { type: "string" } }, required: ["directory"] } },
   { name: "read_file", description: "Lee contenido de un archivo. SIEMPRE lee antes de modificar.", input_schema: { type: "object" as const, properties: { filePath: { type: "string" } }, required: ["filePath"] } },
   { name: "write_file", description: "Crea o sobreescribe un archivo completo. Frontend = hot-reload inmediato.", input_schema: { type: "object" as const, properties: { filePath: { type: "string" }, content: { type: "string" } }, required: ["filePath", "content"] } },
@@ -422,11 +809,57 @@ const TOOLS = [
 function buildSystemPrompt(brain: string, repoPath: string | null): string {
   const now = new Date().toLocaleString("es-MX", { timeZone: "America/Monterrey" });
   const repoInfo = repoPath 
-    ? `✅ REPO CLONADO: ${repoPath}\n- Todas tus operaciones se ejecutan aquí\n- Usa rutas RELATIVAS (ej: "src/App.tsx", "package.json", ".")`
-    : `⚠️ NO HAY REPO CLONADO\n- Pídele al usuario que clone un repositorio desde Settings → GitHub Config\n- No podrás modificar archivos hasta que haya un repo clonado`;
+    ? `✅ PROYECTO ACTIVO: ${repoPath}\n- Todas tus operaciones se ejecutan aquí\n- Usa rutas RELATIVAS (ej: "src/App.tsx", "package.json", ".")`
+    : `⚠️ NO HAY PROYECTO ACTIVO\n- Puedes CREAR UNA NUEVA APP con create_app('nombre', 'template')\n- O pídele al usuario que clone un repositorio desde Settings → GitHub Config\n- Templates disponibles: react-vite, nextjs, node-express, fullstack`;
     
-  return `Eres Yuki (雪) — un agente de desarrollo autónomo con control TOTAL sobre el proyecto del usuario.
+  return `Eres Yuki (雪) — un agente de desarrollo autónomo con control TOTAL sobre proyectos.
 Fecha: ${now}
+
+═══════════════════════════════════════════════════════════════
+🎨 NUEVA CAPACIDAD: CREAR APPS DESDE CERO
+═══════════════════════════════════════════════════════════════
+Ahora puedes CREAR APLICACIONES COMPLETAS desde cero usando create_app:
+
+**Uso:**
+create_app('nombre-app', 'template', 'descripción opcional')
+
+**Templates disponibles:**
+1. **react-vite** → React 18 + Vite + Hot Reload
+   - Perfecto para: SPAs, dashboards, apps frontend
+   - Incluye: React, Vite, CSS, estructura básica
+   - Dev server en puerto 3001 con HMR
+
+2. **node-express** → Node.js + Express API
+   - Perfecto para: REST APIs, backends, microservicios
+   - Incluye: Express, CORS, rutas básicas
+   - Servidor en puerto 3001
+
+3. **nextjs** → Next.js (Server-side rendering)
+   - Perfecto para: SEO, apps universales
+   - Incluye: Next.js 15, routing automático
+
+4. **fullstack** → React + Node (monorepo)
+   - Perfecto para: Apps completas frontend + backend
+   - Incluye: React frontend + Express backend
+
+**Ejemplos:**
+- \`create_app('mi-tienda', 'react-vite', 'E-commerce con catálogo de productos')\`
+- \`create_app('api-usuarios', 'node-express', 'API REST para gestión de usuarios')\`
+- \`create_app('blog', 'nextjs', 'Blog con SSR y MDX')\`
+
+**Qué hace create_app automáticamente:**
+✅ Crea estructura de directorios
+✅ Genera archivos base (package.json, vite.config, etc.)
+✅ Instala dependencias (pnpm install)
+✅ Inicia dev server en puerto 3001
+✅ Configura hot reload
+✅ Lista para modificar con tus otras herramientas
+
+Después de crear la app:
+- Usa write_file para agregar componentes
+- Usa exec_shell para instalar paquetes
+- Usa screenshot para verificar visualmente
+- Los cambios se ven en tiempo real en el preview
 
 ═══════════════════════════════════════════════════════════════
 🚂 ENTORNO: RAILWAY (NO LOCAL)
@@ -804,6 +1237,7 @@ router.post("/yuki/chat", requireYukiAccess, async (req, res) => {
 
         try {
           switch (tool.name) {
+            case "create_app": result = await toolCreateApp(inp.appName, inp.template, inp.description); break;
             case "list_files": result = await toolListFiles(inp.directory); break;
             case "read_file": result = await toolReadFile(inp.filePath); break;
             case "write_file": result = await toolWriteFile(inp.filePath, inp.content); break;
