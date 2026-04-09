@@ -246,6 +246,7 @@ export default function Yuki() {
         setDevServerRunning(devData.running);
         if (devData.running && devData.previewUrl) {
           setPreviewUrl(devData.previewUrl);
+          setPreviewKey(prev => prev + 1); // Force iframe reload
         }
       }
     } catch {}
