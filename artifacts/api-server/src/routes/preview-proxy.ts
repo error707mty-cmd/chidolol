@@ -96,60 +96,63 @@ router.use("/preview", (req, res, next) => {
     proxyRes.on("end", () => {
       // Special handling for HTML - inject routing fix script
       if (contentType.includes("text/html")) {
-        // Inject script to fix client-side routing (Wouter, React Router, etc.)
-        const routingFixScript = `
-    <script>
-      // Fix for client-side routing when served through /api/preview/
-      (function() {
-        const originalPushState = history.pushState;
-        const originalReplaceState = history.replaceState;
-        const basePrefix = '/api/preview';
+        // Inject script IMMEDIATELY at start of head to fix routing before any app code runs
+        const routingFixScript = `<script>
+// IMMEDIATE routing fix - must run before any app code
+(function() {
+  const basePrefix = '/api/preview';
+  
+  // Override location.pathname BEFORE any framework reads it
+  Object.defineProperty(window.location, 'pathname', {
+    get: function() {
+      const realPath = window.location.href.split(window.location.host)[1].split('?')[0].split('#')[0];
+      if (realPath.startsWith(basePrefix)) {
+        return realPath.substring(basePrefix.length) || '/';
+      }
+      return realPath;
+    },
+    configurable: true
+  });
+  
+  // Intercept history API
+  const originalPushState = history.pushState;
+  const originalReplaceState = history.replaceState;
+  
+  history.pushState = function(state, title, url) {
+    if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith(basePrefix)) {
+      url = basePrefix + url;
+    }
+    return originalPushState.call(this, state, title, url);
+  };
+  
+  history.replaceState = function(state, title, url) {
+    if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith(basePrefix)) {
+      url = basePrefix + url;
+    }
+    return originalReplaceState.call(this, state, title, url);
+  };
+  
+  // Intercept link clicks
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('a');
+    if (link && link.href) {
+      const url = new URL(link.href);
+      if (url.origin === window.location.origin && 
+          !url.pathname.startsWith(basePrefix) && 
+          !url.pathname.startsWith('/api/') &&
+          link.target !== '_blank') {
+        e.preventDefault();
+        const newPath = basePrefix + url.pathname + url.search + url.hash;
+        history.pushState(null, '', newPath);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+    }
+  }, true);
+})();
+</script>`;
         
-        // Strip base prefix from pathname for router
-        if (window.location.pathname.startsWith(basePrefix)) {
-          const cleanPath = window.location.pathname.replace(basePrefix, '') || '/';
-          history.replaceState(null, '', basePrefix + cleanPath);
-        }
-        
-        // Override history methods to handle base path
-        history.pushState = function(state, title, url) {
-          if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith(basePrefix)) {
-            url = basePrefix + url;
-          }
-          return originalPushState.call(this, state, title, url);
-        };
-        
-        history.replaceState = function(state, title, url) {
-          if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith(basePrefix)) {
-            url = basePrefix + url;
-          }
-          return originalReplaceState.call(this, state, title, url);
-        };
-        
-        // Intercept link clicks to add base prefix
-        document.addEventListener('click', function(e) {
-          const link = e.target.closest('a');
-          if (link && link.href) {
-            const url = new URL(link.href);
-            if (url.origin === window.location.origin && 
-                !url.pathname.startsWith(basePrefix) && 
-                !url.pathname.startsWith('/api/')) {
-              e.preventDefault();
-              const newPath = basePrefix + url.pathname + url.search + url.hash;
-              if (link.target === '_blank') {
-                window.open(newPath, '_blank');
-              } else {
-                history.pushState(null, '', newPath);
-                window.dispatchEvent(new PopStateEvent('popstate'));
-              }
-            }
-          }
-        }, true);
-      })();
-    </script>`;
-        
-        // Inject script before closing head tag
-        body = body.replace('</head>', routingFixScript + '\n</head>');
+        // Inject script at the VERY START of <head>
+        body = body.replace('<head>', '<head>' + routingFixScript);
       }
       
       // Rewrite absolute paths to work through proxy
