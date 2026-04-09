@@ -1091,19 +1091,38 @@ export default function Yuki() {
             </div>
             
             <div className="yk-modal-body">
-              {/* Lista de IAs para SELECCIONAR - Siempre visible */}
-              <div className="yk-providers-list" style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  fontSize: '13px', 
+              {/* DEBUG: Mostrar estado de config */}
+              {!config && (
+                <div style={{ padding: '12px', background: 'rgba(255,0,0,0.2)', borderRadius: '8px', marginBottom: '16px', fontSize: '12px' }}>
+                  ⚠️ Cargando configuración...
+                </div>
+              )}
+              
+              {/* Lista de IAs para SELECCIONAR - SIEMPRE VISIBLE */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ 
+                  fontSize: '15px', 
                   fontWeight: '700', 
-                  color: 'rgba(255,255,255,0.8)', 
+                  color: '#fff', 
                   marginBottom: '16px',
-                  display: 'block'
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}>
-                  {config?.providers && config.providers.length > 0 
-                    ? '⚡ Selecciona tu IA Activa' 
-                    : '📝 Primero agrega una IA usando los presets de abajo'}
-                </label>
+                  <span>⚡</span>
+                  <span>Tus IAs Configuradas</span>
+                  {config?.providers && (
+                    <span style={{ 
+                      fontSize: '11px', 
+                      padding: '2px 8px', 
+                      background: 'rgba(139,92,246,0.2)', 
+                      borderRadius: '12px',
+                      fontWeight: '500'
+                    }}>
+                      {config.providers.length}
+                    </span>
+                  )}
+                </div>
                 
                 {config?.providers && config.providers.length > 0 ? (
                   <div style={{ 
@@ -1135,6 +1154,7 @@ export default function Yuki() {
                           transition: 'all 0.2s'
                         }}
                       >
+                        {/* Radio button */}
                         <div style={{
                           width: '20px',
                           height: '20px',
@@ -1154,44 +1174,51 @@ export default function Yuki() {
                             }} />
                           )}
                         </div>
+                        
+                        {/* Emoji */}
                         <div style={{ fontSize: '28px' }}>
                           {p.name.toLowerCase().includes('deepseek') ? '🧠' :
                            p.name.toLowerCase().includes('gpt') || p.name.toLowerCase().includes('openai') ? '🤖' :
                            p.name.toLowerCase().includes('claude') ? '🎭' :
                            p.name.toLowerCase().includes('groq') ? '⚡' : '✨'}
                         </div>
+                        
+                        {/* Info */}
                         <div style={{ flex: 1 }}>
                           <div style={{ 
                             fontSize: '14px', 
                             fontWeight: '600', 
-                            color: 'var(--yk-text)',
+                            color: '#fff',
                             marginBottom: '2px'
                           }}>
                             {p.name}
                           </div>
                           <div style={{ 
                             fontSize: '11px', 
-                            color: 'var(--yk-text-muted)',
+                            color: 'rgba(255,255,255,0.5)',
                             fontFamily: 'monospace'
                           }}>
                             {p.model}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '4px' }}>
+                        
+                        {/* Acciones */}
+                        <div style={{ display: 'flex', gap: '4px' }} onClick={e => e.stopPropagation()}>
                           <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
+                            onClick={() => {
                               setEditingProvider(p);
                               setNewProviderForm({ name: p.name, model: p.model, apiKey: "", baseUrl: p.baseUrl || "" });
                             }}
                             style={{
                               padding: '6px 10px',
                               background: 'rgba(255,255,255,0.05)',
-                              border: '1px solid var(--yk-border)',
+                              border: '1px solid rgba(255,255,255,0.1)',
                               borderRadius: '6px',
-                              color: 'var(--yk-text-muted)',
+                              color: 'rgba(255,255,255,0.6)',
                               fontSize: '11px',
-                              cursor: 'pointer'
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center'
                             }}
                             title="Editar"
                           >
@@ -1199,8 +1226,7 @@ export default function Yuki() {
                           </button>
                           {config.providers.length > 1 && (
                             <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={() => {
                                 if (confirm(`¿Eliminar ${p.name}?`)) deleteProvider(p.id);
                               }}
                               style={{
@@ -1210,7 +1236,9 @@ export default function Yuki() {
                                 borderRadius: '6px',
                                 color: '#ef4444',
                                 fontSize: '11px',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center'
                               }}
                               title="Eliminar"
                             >
@@ -1223,23 +1251,27 @@ export default function Yuki() {
                   </div>
                 ) : (
                   <div style={{ 
-                    padding: '24px', 
+                    padding: '32px 24px', 
                     background: 'rgba(59, 130, 246, 0.08)', 
                     border: '2px dashed rgba(59, 130, 246, 0.3)', 
                     borderRadius: '12px',
                     textAlign: 'center'
                   }}>
-                    <div style={{ fontSize: '40px', marginBottom: '8px' }}>🤖</div>
-                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>
-                      No hay IAs configuradas todavía
+                    <div style={{ fontSize: '48px', marginBottom: '12px' }}>🤖</div>
+                    <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', marginBottom: '6px', fontWeight: '600' }}>
+                      No hay IAs configuradas
+                    </div>
+                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', margin: 0 }}>
+                      Usa los presets de abajo para agregar tu primera IA
                     </p>
                   </div>
                 )}
               </div>
               
+              {/* Separador */}
               <div style={{ 
                 height: '1px', 
-                background: 'var(--yk-border)', 
+                background: 'rgba(255,255,255,0.1)', 
                 marginBottom: '24px' 
               }} />
 
