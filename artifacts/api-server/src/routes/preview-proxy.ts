@@ -112,11 +112,12 @@ router.use("/preview", (req, res, next) => {
         .replace(/import\((["'])(\/@[^"']+)\1\)/g, 'import($1/api/preview$2$1)')
         .replace(/import\((["'])(\/src\/[^"']+)\1\)/g, 'import($1/api/preview$2$1)')
         .replace(/import\((["'])(\/node_modules\/[^"']+)\1\)/g, 'import($1/api/preview$2$1)')
-        // Href links
+        // Href links (including favicon and other assets)
         .replace(/href=(["'])(\/@[^"']+)\1/g, 'href=$1/api/preview$2$1')
         .replace(/href=(["'])(\/src\/[^"']+)\1/g, 'href=$1/api/preview$2$1')
         .replace(/href=(["'])(\/node_modules\/[^"']+)\1/g, 'href=$1/api/preview$2$1')
-        .replace(/href=(["'])(\/assets\/[^"']+)\1/g, 'href=$1/api/preview$2$1');
+        .replace(/href=(["'])(\/assets\/[^"']+)\1/g, 'href=$1/api/preview$2$1')
+        .replace(/href=(["'])(\/[^"':]+\.(?:svg|png|jpg|jpeg|ico|css))\1/g, 'href=$1/api/preview$2$1');
       
       res.setHeader("content-type", contentType);
       res.setHeader("content-length", Buffer.byteLength(rewritten, "utf8"));
