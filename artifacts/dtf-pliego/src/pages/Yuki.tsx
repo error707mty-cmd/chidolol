@@ -1034,6 +1034,73 @@ export default function Yuki() {
                             <span>🚀</span>
                             <span>Opción 2: Desplegar en Railway</span>
                           </div>
+                          
+                          {/* Campo para repo URL */}
+                          <div style={{ marginBottom: '12px' }}>
+                            <label style={{ 
+                              fontSize: '11px', 
+                              fontWeight: '600', 
+                              color: 'rgba(255,255,255,0.7)',
+                              display: 'block',
+                              marginBottom: '6px'
+                            }}>
+                              Repositorio GitHub:
+                            </label>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <input
+                                type="text"
+                                value={githubForm.repoUrl}
+                                onChange={(e) => setGithubForm(prev => ({ ...prev, repoUrl: e.target.value }))}
+                                placeholder="https://github.com/usuario/repo"
+                                style={{
+                                  flex: 1,
+                                  padding: '8px 12px',
+                                  background: 'rgba(0,0,0,0.3)',
+                                  border: '1px solid rgba(255,255,255,0.2)',
+                                  borderRadius: '6px',
+                                  color: '#fff',
+                                  fontSize: '12px',
+                                  fontFamily: 'monospace'
+                                }}
+                              />
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`${API_BASE}/github/config`, {
+                                      method: 'POST',
+                                      headers: { 
+                                        'Content-Type': 'application/json',
+                                        Authorization: `Bearer ${token}`
+                                      },
+                                      body: JSON.stringify({
+                                        repoUrl: githubForm.repoUrl,
+                                        token: githubForm.token || githubConfig?.token || ''
+                                      })
+                                    });
+                                    if (res.ok) {
+                                      await loadGitHubConfig();
+                                      showToast("success", "Repo actualizado");
+                                    }
+                                  } catch {}
+                                }}
+                                disabled={!githubForm.repoUrl}
+                                style={{
+                                  padding: '8px 12px',
+                                  background: githubForm.repoUrl ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255,255,255,0.1)',
+                                  border: '1px solid rgba(34, 197, 94, 0.4)',
+                                  borderRadius: '6px',
+                                  color: '#fff',
+                                  fontSize: '11px',
+                                  fontWeight: '600',
+                                  cursor: githubForm.repoUrl ? 'pointer' : 'not-allowed',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                <Save size={12} style={{ display: 'inline' }} />
+                              </button>
+                            </div>
+                          </div>
+
                           <ol style={{ 
                             fontSize: '12px', 
                             color: 'rgba(255,255,255,0.8)',
@@ -1041,12 +1108,13 @@ export default function Yuki() {
                             margin: '0 0 12px 0',
                             paddingLeft: '20px'
                           }}>
-                            <li>Haz push de tus cambios a GitHub</li>
+                            <li>Configura tu repositorio GitHub arriba</li>
+                            <li>Haz push de tus cambios</li>
                             <li>Ve a Railway y crea un nuevo proyecto</li>
                             <li>Conecta tu repositorio</li>
-                            <li>Railway detectará automáticamente la configuración</li>
                             <li>Tu app estará en línea en minutos</li>
                           </ol>
+                          
                           <button
                             onClick={pushToGitHub}
                             disabled={pushing || !githubConfig?.repoUrl}
@@ -1074,7 +1142,7 @@ export default function Yuki() {
                             ) : (
                               <>
                                 <Upload size={16} />
-                                <span>Push a GitHub Ahora</span>
+                                <span>Push a {githubConfig?.repoUrl ? new URL(githubConfig.repoUrl).pathname.split('/').pop() : 'GitHub'}</span>
                               </>
                             )}
                           </button>
