@@ -141,10 +141,11 @@ function requireYukiAccess(
 // TOOL IMPLEMENTATIONS - WORKING ONLY IN CLONED REPO
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Path helpers - NOW RELATIVE TO CLONED REPO
+// Path helpers - NOW RELATIVE TO CLONED REPO OR MAIN PROJECT
 async function getRepoBasePath(): Promise<string | null> {
   const clonedPath = await getClonedRepoPath();
-  return clonedPath;
+  // Si hay repo clonado, usarlo; sino, trabajar en proyecto actual DTF
+  return clonedPath || "/app";
 }
 
 async function resolveSafePathInRepo(relativePath: string): Promise<string | null> {
@@ -808,58 +809,37 @@ const TOOLS = [
 
 function buildSystemPrompt(brain: string, repoPath: string | null): string {
   const now = new Date().toLocaleString("es-MX", { timeZone: "America/Monterrey" });
-  const repoInfo = repoPath 
-    ? `✅ PROYECTO ACTIVO: ${repoPath}\n- Todas tus operaciones se ejecutan aquí\n- Usa rutas RELATIVAS (ej: "src/App.tsx", "package.json", ".")`
-    : `⚠️ NO HAY PROYECTO ACTIVO\n- Puedes CREAR UNA NUEVA APP con create_app('nombre', 'template')\n- O pídele al usuario que clone un repositorio desde Settings → GitHub Config\n- Templates disponibles: react-vite, nextjs, node-express, fullstack`;
+  const repoInfo = repoPath && repoPath !== "/app"
+    ? `✅ PROYECTO CLONADO: ${repoPath}\n- Todas tus operaciones se ejecutan aquí\n- Usa rutas RELATIVAS (ej: "src/App.tsx", "package.json", ".")`
+    : `✅ PROYECTO DTF ACTIVO: /app\n- Trabajando directamente en la aplicación DTF de impresión\n- Frontend: /app/artifacts/dtf-pliego/\n- Backend: /app/artifacts/api-server/\n- Usa rutas RELATIVAS desde la raíz (ej: "artifacts/dtf-pliego/src/App.tsx")\n- Puedes modificar, agregar componentes, cambiar estilos, etc.\n- También puedes CREAR UNA NUEVA APP con create_app('nombre', 'template')`;
     
   return `Eres Yuki (雪) — un agente de desarrollo autónomo con control TOTAL sobre proyectos.
 Fecha: ${now}
 
 ═══════════════════════════════════════════════════════════════
-🎨 NUEVA CAPACIDAD: CREAR APPS DESDE CERO
+🎨 CAPACIDAD DUAL: Trabajar en Proyecto Actual O Crear Nuevos
 ═══════════════════════════════════════════════════════════════
-Ahora puedes CREAR APLICACIONES COMPLETAS desde cero usando create_app:
 
-**Uso:**
-create_app('nombre-app', 'template', 'descripción opcional')
+**MODO 1: Trabajar en Proyecto DTF Actual**
+Puedes modificar directamente la aplicación de impresión DTF:
+- Frontend React: artifacts/dtf-pliego/src/
+- Backend Node: artifacts/api-server/src/
+- Componentes: artifacts/dtf-pliego/src/components/
+- Páginas: artifacts/dtf-pliego/src/pages/
+- Estilos: artifacts/dtf-pliego/src/index.css
 
-**Templates disponibles:**
-1. **react-vite** → React 18 + Vite + Hot Reload
-   - Perfecto para: SPAs, dashboards, apps frontend
-   - Incluye: React, Vite, CSS, estructura básica
-   - Dev server en puerto 3001 con HMR
+Ejemplos:
+- "Agrega un nuevo componente Button"
+- "Cambia el color primary a azul"
+- "Crea una nueva página de Dashboard"
+- "Modifica el login para agregar OAuth"
 
-2. **node-express** → Node.js + Express API
-   - Perfecto para: REST APIs, backends, microservicios
-   - Incluye: Express, CORS, rutas básicas
-   - Servidor en puerto 3001
-
-3. **nextjs** → Next.js (Server-side rendering)
-   - Perfecto para: SEO, apps universales
-   - Incluye: Next.js 15, routing automático
-
-4. **fullstack** → React + Node (monorepo)
-   - Perfecto para: Apps completas frontend + backend
-   - Incluye: React frontend + Express backend
-
-**Ejemplos:**
-- \`create_app('mi-tienda', 'react-vite', 'E-commerce con catálogo de productos')\`
-- \`create_app('api-usuarios', 'node-express', 'API REST para gestión de usuarios')\`
-- \`create_app('blog', 'nextjs', 'Blog con SSR y MDX')\`
-
-**Qué hace create_app automáticamente:**
-✅ Crea estructura de directorios
-✅ Genera archivos base (package.json, vite.config, etc.)
-✅ Instala dependencias (pnpm install)
-✅ Inicia dev server en puerto 3001
-✅ Configura hot reload
-✅ Lista para modificar con tus otras herramientas
-
-Después de crear la app:
-- Usa write_file para agregar componentes
-- Usa exec_shell para instalar paquetes
-- Usa screenshot para verificar visualmente
-- Los cambios se ven en tiempo real en el preview
+**MODO 2: Crear Apps Nuevas**
+Usa create_app('nombre', 'template') para proyectos desde cero:
+- react-vite: Apps React modernas
+- node-express: APIs REST
+- nextjs: Apps con SSR
+- fullstack: React + Node
 
 ═══════════════════════════════════════════════════════════════
 🚂 ENTORNO: RAILWAY (NO LOCAL)
