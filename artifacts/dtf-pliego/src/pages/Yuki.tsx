@@ -97,6 +97,7 @@ export default function Yuki() {
   
   // Chat
   const [messages, setMessages] = useState<Message[]>([]);
+  const [conversationLoaded, setConversationLoaded] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [currentTool, setCurrentTool] = useState<string | null>(null);
@@ -189,6 +190,7 @@ export default function Yuki() {
     if (!token || !hasAccess) return;
     loadConfig();
     loadGitHubConfig();
+    loadConversation();
   }, [token, hasAccess]);
 
   useEffect(() => {
@@ -197,6 +199,15 @@ export default function Yuki() {
       return () => clearTimeout(t);
     }
   }, [toast]);
+
+  // Auto-save conversation when messages change
+  useEffect(() => {
+    if (!token || !hasAccess || !conversationLoaded || messages.length === 0) return;
+    const timer = setTimeout(() => {
+      saveConversation(messages);
+    }, 1000); // Debounce de 1 segundo
+    return () => clearTimeout(timer);
+  }, [messages, token, hasAccess, conversationLoaded]);
 
   const showToast = (type: "success" | "error", msg: string) => setToast({ type, msg });
 
@@ -733,7 +744,7 @@ export default function Yuki() {
               </div>
             </div>
             {messages.length > 0 && (
-              <button className="yk-clear-btn" onClick={() => setMessages([])} title="Limpiar">
+              <button className="yk-clear-btn" onClick={clearConversation} title="Limpiar conversación">
                 <Trash2 size={14} />
               </button>
             )}
