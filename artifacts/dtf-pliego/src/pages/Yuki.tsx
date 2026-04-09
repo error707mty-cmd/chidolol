@@ -1052,6 +1052,7 @@ export default function Yuki() {
                     </div>
                   ))}
                 </div>
+              </div>
 
               {/* Add/Edit provider form */}
               <div className="yk-provider-form">
