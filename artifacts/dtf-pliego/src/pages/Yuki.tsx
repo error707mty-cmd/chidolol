@@ -834,15 +834,6 @@ export default function Yuki() {
           )}
           
           <form className="yk-chat-input" onSubmit={sendMessage}>
-            {loading && (
-              <div className="yk-loading-bar">
-                <div className="yk-loading-progress"></div>
-                <div className="yk-loading-text">
-                  <span className="yk-loading-icon">⚡</span>
-                  <span>{currentTool || "Procesando..."}</span>
-                </div>
-              </div>
-            )}
             <div className="yk-input-actions">
               <input
                 type="file"
@@ -888,6 +879,17 @@ export default function Yuki() {
             <button type="submit" disabled={loading || !input.trim()} className="yk-send-btn">
               {loading ? <Loader2 size={18} className="yk-spin" /> : <Send size={18} />}
             </button>
+            
+            {/* Barra de progreso ABAJO - estilo logo colorido */}
+            {loading && (
+              <div className="yk-loading-bar-bottom">
+                <div className="yk-loading-progress-gradient"></div>
+                <div className="yk-loading-text-compact">
+                  <span>⚡</span>
+                  <span>{currentTool ? currentTool.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : "Trabajando..."}</span>
+                </div>
+              </div>
+            )}
           </form>
         </div>
 

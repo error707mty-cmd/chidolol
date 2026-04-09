@@ -8,7 +8,15 @@
     {
       "role": "assistant",
       "content": ""
+    },
+    {
+      "role": "user",
+      "content": "hola"
+    },
+    {
+      "role": "assistant",
+      "content": ""
     }
   ],
-  "updatedAt": "2026-04-09T01:10:40.019Z"
+  "updatedAt": "2026-04-09T01:25:29.274Z"
 }
