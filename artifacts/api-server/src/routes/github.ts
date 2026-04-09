@@ -291,7 +291,7 @@ router.post("/github/start-dev", requireYukiAccess, async (req, res) => {
     res.json({
       success: true,
       message: "Dev server iniciado en puerto 3001 🚀",
-      previewUrl: "http://localhost:3001",
+      previewUrl: "/api/preview/",
       workDir,
       logFile: "/tmp/yuki-dev.log",
     });
@@ -324,7 +324,7 @@ router.get("/github/dev-status", requireYukiAccess, async (req, res) => {
     res.json({
       running,
       port: 3001,
-      previewUrl: running ? "http://localhost:3001" : null,
+      previewUrl: running ? "/api/preview/" : null,
       logs: logs.slice(-2000),
     });
   } catch (err: any) {

@@ -9,6 +9,7 @@ import chatRouter from "./chat";
 import yukiRouter from "./yuki";
 import githubRouter from "./github";
 import yukiConversationsRouter from "./yuki-conversations";
+import previewProxyRouter from "./preview-proxy";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(chatRouter);
 router.use(yukiRouter);
 router.use(githubRouter);
 router.use(yukiConversationsRouter);
+router.use(previewProxyRouter);
 
 export default router;
