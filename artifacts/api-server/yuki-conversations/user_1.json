@@ -1,0 +1,14 @@
+{
+  "userId": 1,
+  "messages": [
+    {
+      "role": "user",
+      "content": "hola"
+    },
+    {
+      "role": "assistant",
+      "content": ""
+    }
+  ],
+  "updatedAt": "2026-04-09T01:04:37.374Z"
+}

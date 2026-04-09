@@ -1,12 +1,12 @@
 {
-  "activeProviderId": "deepseek",
+  "activeProviderId": "openai-emergent",
   "providers": [
     {
-      "id": "deepseek",
-      "name": "DeepSeek",
-      "model": "deepseek-chat",
+      "id": "openai-emergent",
+      "name": "OpenAI (Emergent)",
+      "model": "gpt-4o-mini",
       "apiKey": "sk-emergent-9E4013fC90b3803Ad8",
-      "baseUrl": "https://api.deepseek.com"
+      "baseUrl": "https://llm.kindo.ai/v1"
     }
   ]
 }
