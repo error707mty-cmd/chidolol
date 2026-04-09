@@ -960,25 +960,85 @@ export default function Yuki() {
                     <>
                       <div className="yk-preview-status">
                         <div className="yk-preview-icon">🚀</div>
-                        <h3>Preview listo</h3>
+                        <h3>Dev Server Activo</h3>
                         <p>Tu aplicación está corriendo en el puerto 3001</p>
                       </div>
+                      
+                      <div style={{
+                        padding: '20px',
+                        background: 'rgba(139, 92, 246, 0.1)',
+                        border: '1px solid rgba(139, 92, 246, 0.3)',
+                        borderRadius: '12px',
+                        width: '100%',
+                        maxWidth: '500px'
+                      }}>
+                        <div style={{ 
+                          fontSize: '13px', 
+                          fontWeight: '600', 
+                          color: 'var(--yk-text)',
+                          marginBottom: '12px'
+                        }}>
+                          📍 URL del Preview:
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          gap: '8px',
+                          alignItems: 'center'
+                        }}>
+                          <input
+                            type="text"
+                            value={`${window.location.origin}/api/preview/`}
+                            readOnly
+                            style={{
+                              flex: 1,
+                              padding: '10px 12px',
+                              background: 'rgba(0,0,0,0.3)',
+                              border: '1px solid var(--yk-border)',
+                              borderRadius: '6px',
+                              color: 'var(--yk-text)',
+                              fontSize: '12px',
+                              fontFamily: 'monospace'
+                            }}
+                          />
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${window.location.origin}/api/preview/`);
+                              showToast("success", "URL copiada al portapapeles");
+                            }}
+                            style={{
+                              padding: '10px 16px',
+                              background: 'rgba(255,255,255,0.1)',
+                              border: '1px solid var(--yk-border)',
+                              borderRadius: '6px',
+                              color: 'var(--yk-text)',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '500'
+                            }}
+                          >
+                            Copiar
+                          </button>
+                        </div>
+                        <div style={{ 
+                          fontSize: '11px', 
+                          color: 'var(--yk-text-muted)',
+                          marginTop: '10px',
+                          lineHeight: '1.5'
+                        }}>
+                          💡 Abre esta URL en tu navegador para ver tu aplicación
+                        </div>
+                      </div>
+
                       <button 
                         className="yk-preview-open-btn"
                         onClick={() => {
-                          // Construir URL completa del preview
-                          const fullUrl = previewUrl.startsWith('http') 
-                            ? previewUrl 
-                            : `${window.location.origin}${previewUrl}`;
+                          const fullUrl = `${window.location.origin}/api/preview/`;
                           window.open(fullUrl, '_blank', 'noopener,noreferrer');
                         }}
                       >
                         <ExternalLink size={20} />
-                        <span>Abrir Preview en Nueva Pestaña</span>
+                        <span>Abrir en Nueva Pestaña</span>
                       </button>
-                      <div className="yk-preview-hint">
-                        <span>💡 El preview se abrirá en una nueva ventana para mejor rendimiento</span>
-                      </div>
                     </>
                   ) : (
                     <div className="yk-preview-empty">
@@ -1031,49 +1091,130 @@ export default function Yuki() {
             </div>
             
             <div className="yk-modal-body">
-              {/* Provider list - Siempre visible */}
-              <div className="yk-providers-list">
-                <label style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.6)', marginBottom: '12px', textTransform: 'uppercase' }}>
-                  {config?.providers && config.providers.length > 0 ? 'Selecciona tu IA' : 'Tus IAs configuradas aparecerán aquí'}
+              {/* Lista de IAs para SELECCIONAR - Siempre visible */}
+              <div className="yk-providers-list" style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  fontSize: '13px', 
+                  fontWeight: '700', 
+                  color: 'rgba(255,255,255,0.8)', 
+                  marginBottom: '16px',
+                  display: 'block'
+                }}>
+                  {config?.providers && config.providers.length > 0 
+                    ? '⚡ Selecciona tu IA Activa' 
+                    : '📝 Primero agrega una IA usando los presets de abajo'}
                 </label>
                 
                 {config?.providers && config.providers.length > 0 ? (
-                  <div className="yk-providers-grid">
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '8px',
+                    padding: '12px',
+                    background: 'rgba(255,255,255,0.02)',
+                    borderRadius: '12px',
+                    border: '1px solid var(--yk-border)'
+                  }}>
                     {config.providers.map(p => (
                       <div 
-                        key={p.id} 
-                        className={`yk-provider-card ${p.id === config.activeProviderId ? 'yk-provider-card-active' : ''}`}
+                        key={p.id}
                         onClick={() => setActiveProvider(p.id)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          background: p.id === config.activeProviderId 
+                            ? 'rgba(139, 92, 246, 0.15)' 
+                            : 'rgba(255,255,255,0.03)',
+                          border: `2px solid ${p.id === config.activeProviderId 
+                            ? 'rgba(139, 92, 246, 0.5)' 
+                            : 'transparent'}`,
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
                       >
-                        <div className="yk-provider-card-icon">
+                        <div style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          border: '2px solid rgba(255,255,255,0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {p.id === config.activeProviderId && (
+                            <div style={{
+                              width: '10px',
+                              height: '10px',
+                              borderRadius: '50%',
+                              background: '#8b5cf6'
+                            }} />
+                          )}
+                        </div>
+                        <div style={{ fontSize: '28px' }}>
                           {p.name.toLowerCase().includes('deepseek') ? '🧠' :
                            p.name.toLowerCase().includes('gpt') || p.name.toLowerCase().includes('openai') ? '🤖' :
                            p.name.toLowerCase().includes('claude') ? '🎭' :
                            p.name.toLowerCase().includes('groq') ? '⚡' : '✨'}
                         </div>
-                        <div className="yk-provider-card-body">
-                          <div className="yk-provider-card-name">{p.name}</div>
-                          <div className="yk-provider-card-model">{p.model}</div>
-                          {p.id === config.activeProviderId && (
-                            <div className="yk-provider-card-badge">
-                              <Check size={10} />
-                              <span>ACTIVO</span>
-                            </div>
-                          )}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ 
+                            fontSize: '14px', 
+                            fontWeight: '600', 
+                            color: 'var(--yk-text)',
+                            marginBottom: '2px'
+                          }}>
+                            {p.name}
+                          </div>
+                          <div style={{ 
+                            fontSize: '11px', 
+                            color: 'var(--yk-text-muted)',
+                            fontFamily: 'monospace'
+                          }}>
+                            {p.model}
+                          </div>
                         </div>
-                        <div className="yk-provider-card-actions" onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', gap: '4px' }}>
                           <button 
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setEditingProvider(p);
                               setNewProviderForm({ name: p.name, model: p.model, apiKey: "", baseUrl: p.baseUrl || "" });
-                            }} 
-                            title="Editar API Key"
+                            }}
+                            style={{
+                              padding: '6px 10px',
+                              background: 'rgba(255,255,255,0.05)',
+                              border: '1px solid var(--yk-border)',
+                              borderRadius: '6px',
+                              color: 'var(--yk-text-muted)',
+                              fontSize: '11px',
+                              cursor: 'pointer'
+                            }}
+                            title="Editar"
                           >
-                            <Key size={13} />
+                            <Key size={12} />
                           </button>
                           {config.providers.length > 1 && (
-                            <button onClick={() => deleteProvider(p.id)} title="Eliminar">
-                              <X size={13} />
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`¿Eliminar ${p.name}?`)) deleteProvider(p.id);
+                              }}
+                              style={{
+                                padding: '6px 10px',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '6px',
+                                color: '#ef4444',
+                                fontSize: '11px',
+                                cursor: 'pointer'
+                              }}
+                              title="Eliminar"
+                            >
+                              <X size={12} />
                             </button>
                           )}
                         </div>
@@ -1082,20 +1223,25 @@ export default function Yuki() {
                   </div>
                 ) : (
                   <div style={{ 
-                    padding: '32px 24px', 
+                    padding: '24px', 
                     background: 'rgba(59, 130, 246, 0.08)', 
                     border: '2px dashed rgba(59, 130, 246, 0.3)', 
                     borderRadius: '12px',
-                    marginBottom: '20px',
                     textAlign: 'center'
                   }}>
-                    <div style={{ fontSize: '40px', marginBottom: '12px' }}>🤖</div>
-                    <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: '1.6' }}>
-                      Agrega tu primera IA usando los presets de abajo
+                    <div style={{ fontSize: '40px', marginBottom: '8px' }}>🤖</div>
+                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>
+                      No hay IAs configuradas todavía
                     </p>
                   </div>
                 )}
               </div>
+              
+              <div style={{ 
+                height: '1px', 
+                background: 'var(--yk-border)', 
+                marginBottom: '24px' 
+              }} />
 
               {/* Add/Edit provider form */}
               <div className="yk-provider-form">
