@@ -158,27 +158,68 @@ router.post("/github/config", requireYukiAccess, async (req, res) => {
               // Kill any existing dev server on port 3001
               await execAsync("lsof -ti:3001 | xargs kill -9 2>/dev/null || true");
               
-              // Determine work directory (frontend or root)
-              const frontendPath = path.join(targetClonePath, "artifacts/dtf-pliego");
-              let workDir = frontendPath;
+              // Smart detection of package.json with dev/start script
+              const possiblePaths = [
+                path.join(targetClonePath, "artifacts/dtf-pliego"),
+                path.join(targetClonePath, "frontend"),
+                path.join(targetClonePath, "client"),
+                path.join(targetClonePath, "app"),
+                path.join(targetClonePath, "src"),
+                targetClonePath,
+              ];
               
-              try {
-                await fs.access(path.join(frontendPath, "package.json"));
-              } catch {
-                // Try root
-                workDir = targetClonePath;
+              let workDir: string | null = null;
+              let devScript: string | null = null;
+              let packageManager = "pnpm";
+              
+              for (const dir of possiblePaths) {
+                try {
+                  const pkgPath = path.join(dir, "package.json");
+                  const pkgJson = JSON.parse(await fs.readFile(pkgPath, "utf-8"));
+                  
+                  if (pkgJson.scripts?.dev) {
+                    devScript = "dev";
+                    workDir = dir;
+                    break;
+                  } else if (pkgJson.scripts?.start) {
+                    devScript = "start";
+                    workDir = dir;
+                    break;
+                  } else if (pkgJson.scripts?.serve) {
+                    devScript = "serve";
+                    workDir = dir;
+                    break;
+                  }
+                } catch {
+                  continue;
+                }
               }
               
-              // Start dev server in background
-              const startCmd = `cd "${workDir}" && PORT=3001 pnpm dev > /tmp/yuki-dev.log 2>&1 &`;
-              execAsync(startCmd, { shell: true }).catch(() => {});
-              
-              // Wait for server to start
-              await new Promise(resolve => setTimeout(resolve, 5000));
-              
-              if (cloneResult) {
-                cloneResult.output += "\n🚀 Dev server iniciado en puerto 3001";
-                cloneResult.devServerStarted = true;
+              if (workDir && devScript) {
+                // Detect package manager
+                try {
+                  await fs.access(path.join(targetClonePath, "pnpm-lock.yaml"));
+                  packageManager = "pnpm";
+                } catch {
+                  try {
+                    await fs.access(path.join(targetClonePath, "yarn.lock"));
+                    packageManager = "yarn";
+                  } catch {
+                    packageManager = "npm";
+                  }
+                }
+                
+                // Start dev server in background
+                const startCmd = `cd "${workDir}" && PORT=3001 ${packageManager} ${devScript} > /tmp/yuki-dev.log 2>&1 &`;
+                execAsync(startCmd, { shell: true }).catch(() => {});
+                
+                // Wait for server to start
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                
+                if (cloneResult) {
+                  cloneResult.output += `\n🚀 Dev server iniciado en puerto 3001 usando ${packageManager} ${devScript}`;
+                  cloneResult.devServerStarted = true;
+                }
               }
             } catch (devErr: any) {
               console.error("Error iniciando dev server:", devErr);
@@ -232,27 +273,62 @@ router.post("/github/start-dev", requireYukiAccess, async (req, res) => {
       return;
     }
     
-    // Check for package.json and dev script
-    const frontendPath = path.join(clonePath, "artifacts/dtf-pliego");
-    let devCommand = "pnpm dev";
-    let workDir = frontendPath;
+    // Smart detection: Find the best package.json with dev/start script
+    const possiblePaths = [
+      path.join(clonePath, "artifacts/dtf-pliego"),
+      path.join(clonePath, "frontend"),
+      path.join(clonePath, "client"),
+      path.join(clonePath, "app"),
+      path.join(clonePath, "src"),
+      clonePath,
+    ];
     
-    try {
-      const pkgJson = JSON.parse(await fs.readFile(path.join(frontendPath, "package.json"), "utf-8"));
-      if (!pkgJson.scripts?.dev) {
-        res.status(400).json({ error: "No hay script 'dev' en package.json del frontend" });
-        return;
-      }
-    } catch {
-      // Try root package.json
+    let workDir: string | null = null;
+    let devScript: string | null = null;
+    let packageManager = "pnpm";
+    
+    for (const dir of possiblePaths) {
       try {
-        const rootPkg = JSON.parse(await fs.readFile(path.join(clonePath, "package.json"), "utf-8"));
-        if (rootPkg.scripts?.dev) {
-          workDir = clonePath;
+        const pkgPath = path.join(dir, "package.json");
+        const pkgJson = JSON.parse(await fs.readFile(pkgPath, "utf-8"));
+        
+        // Check for dev scripts in order of preference
+        if (pkgJson.scripts?.dev) {
+          devScript = "dev";
+          workDir = dir;
+          break;
+        } else if (pkgJson.scripts?.start) {
+          devScript = "start";
+          workDir = dir;
+          break;
+        } else if (pkgJson.scripts?.serve) {
+          devScript = "serve";
+          workDir = dir;
+          break;
         }
       } catch {
-        res.status(400).json({ error: "No se encontró package.json con script dev" });
-        return;
+        continue;
+      }
+    }
+    
+    if (!workDir || !devScript) {
+      res.status(400).json({ 
+        error: "No se encontró package.json con script dev/start/serve",
+        hint: "Verifica que tu repositorio tenga un package.json con al menos uno de estos scripts: 'dev', 'start', o 'serve'"
+      });
+      return;
+    }
+    
+    // Detect package manager
+    try {
+      await fs.access(path.join(clonePath, "pnpm-lock.yaml"));
+      packageManager = "pnpm";
+    } catch {
+      try {
+        await fs.access(path.join(clonePath, "yarn.lock"));
+        packageManager = "yarn";
+      } catch {
+        packageManager = "npm";
       }
     }
     
@@ -262,14 +338,20 @@ router.post("/github/start-dev", requireYukiAccess, async (req, res) => {
     } catch {}
     
     // Install dependencies if node_modules doesn't exist
-    const nodeModulesPath = path.join(clonePath, "node_modules");
+    const nodeModulesPath = path.join(workDir, "node_modules");
     try {
       await fs.access(nodeModulesPath);
     } catch {
-      // Install dependencies
+      // Install dependencies using detected package manager
       try {
-        await execAsync("pnpm install --no-frozen-lockfile", {
-          cwd: clonePath,
+        const installCmd = packageManager === "pnpm" 
+          ? "pnpm install --no-frozen-lockfile"
+          : packageManager === "yarn"
+          ? "yarn install"
+          : "npm install";
+        
+        await execAsync(installCmd, {
+          cwd: workDir,
           timeout: 180000, // 3 minutes
         });
       } catch (installErr: any) {
@@ -282,7 +364,7 @@ router.post("/github/start-dev", requireYukiAccess, async (req, res) => {
     }
     
     // Start dev server in background on port 3001
-    const startCmd = `cd "${workDir}" && PORT=3001 pnpm dev > /tmp/yuki-dev.log 2>&1 &`;
+    const startCmd = `cd "${workDir}" && PORT=3001 ${packageManager} ${devScript} > /tmp/yuki-dev.log 2>&1 &`;
     execAsync(startCmd, { shell: true }).catch(() => {});
     
     // Wait a bit for server to start
