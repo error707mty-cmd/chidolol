@@ -1,10 +1,10 @@
 {
-  "activeProviderId": "openai-emergent",
+  "activeProviderId": "gemini-flash",
   "providers": [
     {
-      "id": "openai-emergent",
-      "name": "OpenAI (Emergent)",
-      "model": "gpt-4o-mini",
+      "id": "gemini-flash",
+      "name": "Google Gemini Flash",
+      "model": "gemini-2.0-flash-exp",
       "apiKey": "sk-emergent-9E4013fC90b3803Ad8",
       "baseUrl": "https://llm.kindo.ai/v1"
     }
