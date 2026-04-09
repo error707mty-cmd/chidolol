@@ -237,16 +237,43 @@ export default function Yuki() {
           cloned: clonedData.cloned,
           clonedPath: clonedData.clonePath,
         }));
-      }
-      
-      // Check dev server status
-      const devRes = await fetch(`${API_BASE}/github/dev-status`, { headers: { Authorization: `Bearer ${token}` } });
-      if (devRes.ok) {
-        const devData = await devRes.json();
-        setDevServerRunning(devData.running);
-        if (devData.running && devData.previewUrl) {
-          setPreviewUrl(devData.previewUrl);
-          setPreviewKey(prev => prev + 1); // Force iframe reload
+        
+        // ✨ AUTO-START: Si hay repo clonado, verificar si dev server está corriendo
+        if (clonedData.cloned) {
+          const devRes = await fetch(`${API_BASE}/github/dev-status`, { headers: { Authorization: `Bearer ${token}` } });
+          if (devRes.ok) {
+            const devData = await devRes.json();
+            setDevServerRunning(devData.running);
+            
+            if (devData.running && devData.previewUrl) {
+              setPreviewUrl(devData.previewUrl);
+              setPreviewKey(prev => prev + 1); // Force iframe reload
+            } else {
+              // Si el dev server NO está corriendo, iniciarlo automáticamente
+              console.log("🚀 Auto-iniciando dev server para repo clonado...");
+              try {
+                const startRes = await fetch(`${API_BASE}/github/start-dev`, {
+                  method: "POST",
+                  headers: { 
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}` 
+                  },
+                  body: JSON.stringify({}),
+                });
+                
+                if (startRes.ok) {
+                  const startData = await startRes.json();
+                  setDevServerRunning(true);
+                  setPreviewUrl(startData.previewUrl);
+                  setPreviewKey(prev => prev + 1);
+                  setActivePanel("preview"); // Auto-cambiar a preview
+                  showToast("success", "Dev server iniciado automáticamente 🚀");
+                }
+              } catch (err) {
+                console.error("Error auto-iniciando dev server:", err);
+              }
+            }
+          }
         }
       }
     } catch {}
@@ -369,6 +396,7 @@ export default function Yuki() {
         setDevServerRunning(true);
         setPreviewUrl(data.previewUrl);
         setPreviewKey(prev => prev + 1);
+        setActivePanel("preview"); // Auto-cambiar a tab de preview
         showToast("success", "Dev server iniciado 🚀 Preview actualizado");
       } else {
         const error = await res.json();
