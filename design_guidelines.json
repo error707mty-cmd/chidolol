@@ -1,102 +1,63 @@
 {
-  "theme": "dark",
-  "archetype": "Swiss & High-Contrast",
-  "domain": "SaaS / Developer Tool",
-  "typography": {
-    "headings": {
-      "fontFamily": "Outfit, system-ui, sans-serif",
-      "weights": ["400", "500", "600"],
-      "letterSpacing": "tracking-tight"
-    },
-    "body": {
-      "fontFamily": "IBM Plex Sans, system-ui, sans-serif",
-      "weights": ["400", "500"]
-    },
-    "code": {
-      "fontFamily": "IBM Plex Mono, monospace",
-      "weights": ["400"]
-    }
-  },
+  "theme": "Light",
+  "archetype": "3 (Soft Utility) crossed with 4 (Swiss & High-Contrast)",
+  "design_philosophy": "Claude/Emergent chat aesthetic: Clean, minimalist, highly functional, distraction-free IDE chat interface. Emphasis on beautiful typography, subtle borders, and a calm, off-white/gray color palette with occasional terracotta brand accents.",
   "colors": {
-    "background": {
-      "default": "#000000",
-      "surface": "#0a0a0a",
-      "panel": "#171717"
-    },
-    "borders": {
-      "default": "#262626",
-      "subtle": "#171717",
-      "focus": "#3b82f6"
-    },
-    "text": {
-      "primary": "#fafafa",
-      "secondary": "#a1a1aa",
-      "muted": "#71717a"
-    },
-    "accent": {
-      "primary": "#fafafa",
-      "primaryForeground": "#000000",
-      "brand": "#3b82f6"
-    }
+    "background_app": "#FCFCFC",
+    "background_chat": "#FFFFFF",
+    "background_panel": "#F4F4F5",
+    "text_primary": "#09090B",
+    "text_secondary": "#52525B",
+    "border": "#E4E4E7",
+    "user_bubble": "#F4F4F5",
+    "brand_accent": "#D97757",
+    "brand_accent_hover": "#C26246",
+    "focus_ring": "rgba(9, 9, 11, 0.1)"
   },
-  "spacing_and_layout": {
-    "philosophy": "Minimalist IDE approach. Dense but highly structured, similar to Linear or Vercel.",
-    "grid": "Control Room Grid (Dense, functional, no empty useless spaces).",
-    "gaps": "gap-4 for major panels, gap-2 for inner items.",
-    "paddings": "p-4 or p-6 for major panels, p-2 or p-3 for inner cards.",
-    "radii": "rounded-md (6px) for panels, rounded-sm (4px) for inner elements. Avoid pill shapes (rounded-full) for main UI elements.",
-    "borders": "1px solid #262626 everywhere. No gradients, no soft shadows.",
-    "shadows": "None. Use 1px borders for separation instead of shadows to keep it flat and minimal."
+  "typography": {
+    "primary_font_sans": "Figtree, ui-sans-serif, system-ui, sans-serif",
+    "primary_font_serif": "'EB Garamond', ui-serif, serif",
+    "code_font": "'JetBrains Mono', ui-monospace, monospace",
+    "headings": "font-serif tracking-tight text-zinc-900",
+    "body": "font-sans text-base leading-relaxed text-zinc-800",
+    "code": "font-mono text-sm"
+  },
+  "layout": {
+    "structure": "Split-pane layout. Left: Chat container. Right: Preview/Terminal (IDE) panel.",
+    "chat_container": "flex-1 flex flex-col h-screen max-w-3xl mx-auto relative",
+    "ide_panel": "hidden lg:flex w-[45vw] h-screen border-l border-zinc-200 bg-zinc-50 flex-col shadow-[-8px_0_32px_rgba(0,0,0,0.03)] z-40 transition-transform duration-300",
+    "spacing": "Generous. p-4 to p-8 for containers. gap-6 between messages."
   },
   "components": {
-    "chat_interface": {
-      "style": "Clean message bubbles. No colored backgrounds for user vs bot, use subtle background differences (e.g., transparent vs #171717) and 1px borders. Left aligned.",
-      "input": "Flat textarea, 1px border (#262626), ring-0 focus. Submit button inside input.",
-      "spacing": "p-4 or p-6"
-    },
-    "live_preview": {
-      "style": "Full height panel. Top header bar with URL/Refresh separated by 1px bottom border. Iframe below.",
-      "border": "border-l or border-x #262626"
-    },
-    "terminal_tab": {
-      "style": "Monospace font. Absolute bottom panel or bottom tab. Darkest background (#000000).",
-      "text": "text-sm text-zinc-300"
-    },
-    "modals": {
-      "style": "Flat panel. bg-black/80 backdrop-blur-xl for overlay. Modal itself should be solid #0a0a0a with 1px border #262626.",
-      "backdrop": "bg-black/80 backdrop-blur-sm"
-    },
-    "buttons": {
-      "primary": "bg-zinc-50 text-black hover:bg-zinc-200. Flat, no shadow.",
-      "secondary": "bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800",
-      "icon": "text-zinc-400 hover:text-zinc-50 hover:bg-zinc-900",
-      "ghost": "hover:bg-zinc-900 hover:text-zinc-50"
-    }
+    "chat_message_user": "flex justify-end mb-6 w-full. Inner bubble: bg-zinc-100 text-zinc-900 px-5 py-3.5 rounded-3xl rounded-br-sm max-w-[85%] sm:max-w-[75%] shadow-sm",
+    "chat_message_ai": "flex justify-start mb-8 gap-4 w-full. Inner text: bg-transparent text-zinc-900 py-1.5 max-w-[100%] leading-relaxed",
+    "input_container": "absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white to-transparent pb-8",
+    "input_box": "relative bg-white border border-zinc-200 shadow-sm rounded-2xl p-3 focus-within:shadow-md focus-within:border-zinc-300 transition-all duration-200 w-full flex items-end gap-2",
+    "action_button_primary": "bg-[#D97757] text-white hover:bg-[#C26246] rounded-xl px-4 py-2 text-sm font-medium transition-colors shadow-sm",
+    "action_button_ghost": "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 rounded-lg px-3 py-1.5 text-sm transition-colors",
+    "ide_tabs": "flex gap-2 p-2 border-b border-zinc-200 bg-white items-center justify-between",
+    "settings_modal": "bg-white rounded-3xl shadow-2xl border border-zinc-100 p-6 max-w-md w-full"
   },
-  "motion": {
-    "philosophy": "Instant feedback, very fast transitions (150ms). No excessive animations.",
-    "hover": "Subtle background color change or text color change. No scaling (no hover:scale).",
-    "modals": "Fade in, scale from 98% to 100% fast (150ms)."
+  "interactions": {
+    "hover": "Subtle background shifts (zinc-50 to zinc-100).",
+    "focus": "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/10",
+    "panel_slide": "Smooth transform translation for the right panel opening/closing (like Claude Artifacts)."
   },
   "icons": {
     "library": "lucide-react",
-    "style": "stroke-width: 1.5. Clean, professional."
-  },
-  "images": {
-    "philosophy": "As an IDE tool, minimal to no images are needed. Rely on icons and typography.",
-    "image_urls": {}
+    "usage": "Use stroke-width 1.5, size 18px or 20px for UI actions. size 24px for AI avatar/sparkles."
   },
   "testing": {
-    "attributes": "All interactive and key informational elements MUST include a data-testid attribute in kebab-case."
+    "data_testid_rules": "All interactive elements MUST have data-testid. Examples: data-testid='chat-input', data-testid='send-button', data-testid='settings-trigger', data-testid='preview-tab', data-testid='terminal-tab', data-testid='push-github-button'."
   },
   "instructions_to_main_agent": [
-    "Refactor .js and UI components to remove all 'glow', 'shadow-xl', gradients, and highly saturated colors.",
-    "Implement a pure flat minimalist style: #000000 backgrounds, #171717 panels, 1px #262626 borders.",
-    "Remove excess decorations. Ensure high contrast typography (white text on black/dark grey).",
-    "Ensure 'Live Preview', 'Terminal', 'Chat Interface' follow a structured pane layout (using flex or react-resizable-panels) with clear 1px borders dividing them.",
-    "Add 'data-testid' to all interactive elements to facilitate robust automated testing.",
-    "For components, heavily use Shadcn (customized to have no rounding or shadows, strictly flat with borders).",
-    "No purple (#9D4CDD) or teal (#1B93A4) anywhere. Keep colors muted except for a single focus/accent color if strictly necessary.",
-    "Ensure generous spacing inside containers, but maintain tight functional grids for tools."
+    "Build the UI strictly using React .js files (no .tsx).",
+    "Use Tailwind CSS for styling, adhering to the palette and typography defined here.",
+    "Implement Shadcn UI components for complex interactions (Dialog for Settings/Github modals, Tabs for Preview/Terminal, DropdownMenu for options).",
+    "Make the chat interface feel exactly like Claude: user messages in gray bubbles aligned right, AI messages plain text aligned left with a nice AI avatar icon (e.g., Sparkles).",
+    "The Preview/Terminal panel should function like Claude's Artifacts panel, taking up the right half of the screen on desktop when active.",
+    "Implement a clean, floating chat input anchored at the bottom with a subtle gradient mask behind it so text scrolls cleanly underneath.",
+    "Include all requested features: Settings modal, GitHub integration modal, file attachment button, and IDE actions (Push, Start/Stop dev server, Refresh preview) in the IDE panel header.",
+    "Ensure the design is fully mobile-responsive (panels might stack or use modals on small screens)."
   ]
 }
