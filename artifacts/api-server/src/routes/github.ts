@@ -79,7 +79,7 @@ router.get("/github/config", requireYukiAccess, async (req, res) => {
   }
 });
 
-// ── POST /api/github/config — Save GitHub config ───────────────────────────────
+// ── POST /api/github/config — Save GitHub config & auto-clone ─────────────────
 router.post("/github/config", requireYukiAccess, async (req, res) => {
   try {
     const { repoUrl, token } = req.body as { repoUrl?: string; token?: string };
@@ -94,11 +94,112 @@ router.post("/github/config", requireYukiAccess, async (req, res) => {
     
     await saveGitHubConfig(newConfig);
     
+    // ✨ AUTO-CLONE: Si hay repoUrl y token nuevos, clonar automáticamente
+    let cloneResult = null;
+    if (newConfig.repoUrl && newConfig.token) {
+      const repoChanged = existingConfig?.repoUrl !== newConfig.repoUrl;
+      
+      if (repoChanged || !existingConfig?.clonedPath) {
+        try {
+          // Parse repo URL
+          const repoMatch = newConfig.repoUrl.match(/github\.com[/:]([^/]+)\/([^/.]+)/);
+          if (repoMatch) {
+            const repoName = repoMatch[2].replace(/\.git$/, "");
+            const targetClonePath = path.join(REPOS_DIR, repoName);
+            
+            // Create repos directory
+            await fs.mkdir(REPOS_DIR, { recursive: true });
+            
+            // Remove existing clone if exists
+            try {
+              await execAsync(`rm -rf "${targetClonePath}"`);
+            } catch {}
+            
+            // Clone repo
+            const cloneUrl = newConfig.repoUrl.replace("github.com", `${newConfig.token}@github.com`);
+            const { stdout, stderr } = await execAsync(`git clone "${cloneUrl}" "${targetClonePath}"`, {
+              timeout: 120000,
+              env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+            });
+            
+            // Update config with cloned path
+            newConfig.clonedPath = targetClonePath;
+            await saveGitHubConfig(newConfig);
+            
+            cloneResult = {
+              success: true,
+              clonedPath: targetClonePath,
+              repoName,
+              output: (stdout + stderr).slice(0, 300),
+            };
+            
+            // ✨ AUTO-INSTALL: Instalar dependencias después de clonar
+            try {
+              const nodeModulesPath = path.join(targetClonePath, "node_modules");
+              try {
+                await fs.access(nodeModulesPath);
+              } catch {
+                // node_modules no existe, instalar
+                await execAsync("pnpm install --no-frozen-lockfile", {
+                  cwd: targetClonePath,
+                  timeout: 180000, // 3 minutos
+                });
+                
+                if (cloneResult) {
+                  cloneResult.output += "\n✅ Dependencias instaladas";
+                }
+              }
+            } catch (installErr: any) {
+              console.error("Error instalando dependencias:", installErr);
+            }
+            
+            // ✨ AUTO-START: Iniciar dev server automáticamente
+            try {
+              // Kill any existing dev server on port 3001
+              await execAsync("lsof -ti:3001 | xargs kill -9 2>/dev/null || true");
+              
+              // Determine work directory (frontend or root)
+              const frontendPath = path.join(targetClonePath, "artifacts/dtf-pliego");
+              let workDir = frontendPath;
+              
+              try {
+                await fs.access(path.join(frontendPath, "package.json"));
+              } catch {
+                // Try root
+                workDir = targetClonePath;
+              }
+              
+              // Start dev server in background
+              const startCmd = `cd "${workDir}" && PORT=3001 pnpm dev > /tmp/yuki-dev.log 2>&1 &`;
+              execAsync(startCmd, { shell: true }).catch(() => {});
+              
+              // Wait for server to start
+              await new Promise(resolve => setTimeout(resolve, 5000));
+              
+              if (cloneResult) {
+                cloneResult.output += "\n🚀 Dev server iniciado en puerto 3001";
+                cloneResult.devServerStarted = true;
+              }
+            } catch (devErr: any) {
+              console.error("Error iniciando dev server:", devErr);
+            }
+          }
+        } catch (cloneErr: any) {
+          cloneResult = {
+            success: false,
+            error: cloneErr.message,
+            stderr: cloneErr.stderr?.slice(0, 300),
+          };
+        }
+      }
+    }
+    
     res.json({
       success: true,
       message: "Configuración guardada ✅",
       repoUrl: newConfig.repoUrl,
       tokenSet: !!newConfig.token,
+      cloneResult,
     });
   } catch (err) {
     res.status(500).json({ error: String(err) });
