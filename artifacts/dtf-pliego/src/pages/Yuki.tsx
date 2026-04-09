@@ -959,92 +959,147 @@ export default function Yuki() {
                   {devServerRunning ? (
                     <>
                       <div className="yk-preview-status">
-                        <div className="yk-preview-icon">🚀</div>
-                        <h3>Dev Server Activo</h3>
-                        <p>Tu aplicación está corriendo en el puerto 3001</p>
+                        <div className="yk-preview-icon">🎯</div>
+                        <h3>Cómo Ver el Preview</h3>
+                        <p style={{ fontSize: '13px', lineHeight: '1.6', color: 'rgba(255,255,255,0.7)', maxWidth: '600px', margin: '16px auto' }}>
+                          El dev server está corriendo internamente. Para ver tu aplicación, sigue estos pasos:
+                        </p>
                       </div>
                       
-                      <div style={{
-                        padding: '20px',
-                        background: 'rgba(139, 92, 246, 0.1)',
-                        border: '1px solid rgba(139, 92, 246, 0.3)',
-                        borderRadius: '12px',
-                        width: '100%',
-                        maxWidth: '500px'
-                      }}>
-                        <div style={{ 
-                          fontSize: '13px', 
-                          fontWeight: '600', 
-                          color: 'var(--yk-text)',
-                          marginBottom: '12px'
-                        }}>
-                          📍 URL del Preview:
-                        </div>
+                      <div style={{ width: '100%', maxWidth: '700px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {/* Opción 1: Ejecutar Localmente */}
                         <div style={{
-                          display: 'flex',
-                          gap: '8px',
-                          alignItems: 'center'
+                          padding: '20px',
+                          background: 'rgba(139, 92, 246, 0.1)',
+                          border: '2px solid rgba(139, 92, 246, 0.3)',
+                          borderRadius: '12px'
                         }}>
-                          <input
-                            type="text"
-                            value={`${window.location.origin}/api/preview/`}
-                            readOnly
-                            style={{
-                              flex: 1,
-                              padding: '10px 12px',
-                              background: 'rgba(0,0,0,0.3)',
-                              border: '1px solid var(--yk-border)',
-                              borderRadius: '6px',
-                              color: 'var(--yk-text)',
-                              fontSize: '12px',
+                          <div style={{ 
+                            fontSize: '14px', 
+                            fontWeight: '700', 
+                            color: '#fff',
+                            marginBottom: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}>
+                            <span>💻</span>
+                            <span>Opción 1: Ejecutar Localmente (Recomendado)</span>
+                          </div>
+                          <ol style={{ 
+                            fontSize: '12px', 
+                            color: 'rgba(255,255,255,0.8)',
+                            lineHeight: '1.8',
+                            margin: '0',
+                            paddingLeft: '20px'
+                          }}>
+                            <li>Clona tu repositorio en tu máquina local</li>
+                            <li>Instala dependencias: <code style={{ 
+                              background: 'rgba(0,0,0,0.3)', 
+                              padding: '2px 6px', 
+                              borderRadius: '4px',
                               fontFamily: 'monospace'
-                            }}
-                          />
+                            }}>pnpm install</code></li>
+                            <li>Ejecuta el dev server: <code style={{ 
+                              background: 'rgba(0,0,0,0.3)', 
+                              padding: '2px 6px', 
+                              borderRadius: '4px',
+                              fontFamily: 'monospace'
+                            }}>pnpm dev</code></li>
+                            <li>Abre <code style={{ 
+                              background: 'rgba(0,0,0,0.3)', 
+                              padding: '2px 6px', 
+                              borderRadius: '4px',
+                              fontFamily: 'monospace'
+                            }}>http://localhost:3000</code> en tu navegador</li>
+                          </ol>
+                        </div>
+
+                        {/* Opción 2: Deploy Separado */}
+                        <div style={{
+                          padding: '20px',
+                          background: 'rgba(34, 197, 94, 0.1)',
+                          border: '2px solid rgba(34, 197, 94, 0.3)',
+                          borderRadius: '12px'
+                        }}>
+                          <div style={{ 
+                            fontSize: '14px', 
+                            fontWeight: '700', 
+                            color: '#fff',
+                            marginBottom: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}>
+                            <span>🚀</span>
+                            <span>Opción 2: Desplegar en Railway</span>
+                          </div>
+                          <ol style={{ 
+                            fontSize: '12px', 
+                            color: 'rgba(255,255,255,0.8)',
+                            lineHeight: '1.8',
+                            margin: '0 0 12px 0',
+                            paddingLeft: '20px'
+                          }}>
+                            <li>Haz push de tus cambios a GitHub</li>
+                            <li>Ve a Railway y crea un nuevo proyecto</li>
+                            <li>Conecta tu repositorio</li>
+                            <li>Railway detectará automáticamente la configuración</li>
+                            <li>Tu app estará en línea en minutos</li>
+                          </ol>
                           <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(`${window.location.origin}/api/preview/`);
-                              showToast("success", "URL copiada al portapapeles");
-                            }}
+                            onClick={pushToGitHub}
+                            disabled={pushing || !githubConfig?.repoUrl}
                             style={{
-                              padding: '10px 16px',
-                              background: 'rgba(255,255,255,0.1)',
-                              border: '1px solid var(--yk-border)',
-                              borderRadius: '6px',
-                              color: 'var(--yk-text)',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              fontWeight: '500'
+                              width: '100%',
+                              padding: '12px',
+                              background: !githubConfig?.repoUrl || pushing ? 'rgba(255,255,255,0.1)' : 'rgba(34, 197, 94, 0.2)',
+                              border: '1px solid rgba(34, 197, 94, 0.4)',
+                              borderRadius: '8px',
+                              color: '#fff',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: !githubConfig?.repoUrl || pushing ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '8px'
                             }}
                           >
-                            Copiar
+                            {pushing ? (
+                              <>
+                                <Loader2 size={16} className="yk-spin" />
+                                <span>Haciendo Push...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload size={16} />
+                                <span>Push a GitHub Ahora</span>
+                              </>
+                            )}
                           </button>
                         </div>
-                        <div style={{ 
-                          fontSize: '11px', 
-                          color: 'var(--yk-text-muted)',
-                          marginTop: '10px',
-                          lineHeight: '1.5'
+
+                        {/* Info adicional */}
+                        <div style={{
+                          padding: '16px',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          fontSize: '11px',
+                          color: 'rgba(255,255,255,0.6)',
+                          lineHeight: '1.6'
                         }}>
-                          💡 Abre esta URL en tu navegador para ver tu aplicación
+                          <strong style={{ color: 'rgba(255,255,255,0.8)' }}>💡 Por qué no hay preview en línea:</strong><br/>
+                          Railway tiene limitaciones de red para exponer puertos dinámicos. El preview funciona perfectamente en desarrollo local donde tienes acceso completo a los puertos.
                         </div>
                       </div>
-
-                      <button 
-                        className="yk-preview-open-btn"
-                        onClick={() => {
-                          const fullUrl = `${window.location.origin}/api/preview/`;
-                          window.open(fullUrl, '_blank', 'noopener,noreferrer');
-                        }}
-                      >
-                        <ExternalLink size={20} />
-                        <span>Abrir en Nueva Pestaña</span>
-                      </button>
                     </>
                   ) : (
                     <div className="yk-preview-empty">
                       <div className="yk-preview-icon">⏸️</div>
                       <h3>Preview no disponible</h3>
-                      <p>Configura GitHub y clona un repositorio para ver el preview</p>
+                      <p>Configura GitHub y clona un repositorio primero</p>
                     </div>
                   )}
                 </div>
