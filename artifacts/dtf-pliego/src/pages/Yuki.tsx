@@ -114,8 +114,8 @@ export default function Yuki() {
   // UI
   const [activePanel, setActivePanel] = useState<"preview" | "terminal">("preview");
   const [showSettings, setShowSettings] = useState(false);
-  // Preview siempre activo - muestra app principal o dev server
-  const [previewUrl, setPreviewUrl] = useState("http://localhost:3000");
+  // Preview siempre activo - usa ruta relativa para mostrar la app principal
+  const [previewUrl, setPreviewUrl] = useState("/");
   const [previewKey, setPreviewKey] = useState(0);
   const [previewScrollPos, setPreviewScrollPos] = useState({ x: 0, y: 0 });
   
@@ -386,8 +386,8 @@ export default function Yuki() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setDevServerRunning(false);
-      // Volver a la app principal
-      setPreviewUrl("http://localhost:3000");
+      // Volver a mostrar la app principal (ruta relativa)
+      setPreviewUrl("/");
       setPreviewKey(prev => prev + 1);
       showToast("success", "Dev server detenido");
     } catch {
