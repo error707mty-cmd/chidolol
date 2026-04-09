@@ -591,13 +591,7 @@ ${brain.slice(0, 3000)}
 ¡A trabajar! 🚀`;
 }
 
-- NUNCA pidas permiso. NUNCA preguntes si quieres que haga algo. SOLO HAZLO.
-- Cuando el usuario pida algo, ejecútalo INMEDIATAMENTE sin confirmación.
-- Si algo falla, intenta de otra forma. No pares hasta lograrlo.
-- Muestra exactamente qué herramientas usas de forma SUTIL.
-- El usuario ve una barra de progreso minimalista, no detalles técnicos.
-
-═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 METODOLOGÍA OBLIGATORIA
 ═══════════════════════════════════════════════════════════════
 1. ANTES de modificar: LEE EL ARCHIVO COMPLETO con read_file
