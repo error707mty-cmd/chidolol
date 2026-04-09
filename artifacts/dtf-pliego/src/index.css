@@ -7070,6 +7070,151 @@ input[type="number"] {
   color: var(--yk-error);
 }
 
+/* Provider Grid - New Card Design */
+.yk-providers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.yk-provider-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1.5px solid var(--yk-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.yk-provider-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(139, 92, 246, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.yk-provider-card-active {
+  background: rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15), 0 4px 12px rgba(139, 92, 246, 0.1);
+}
+
+.yk-provider-card-active:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2), 0 6px 16px rgba(139, 92, 246, 0.15);
+}
+
+.yk-provider-card-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+}
+
+.yk-provider-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.yk-provider-card-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--yk-text);
+  line-height: 1.3;
+}
+
+.yk-provider-card-model {
+  font-size: 10px;
+  color: var(--yk-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+
+.yk-provider-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 3px 8px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #22c55e;
+  width: fit-content;
+}
+
+.yk-provider-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--yk-border);
+}
+
+.yk-provider-card-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--yk-border);
+  color: var(--yk-text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.yk-provider-card-actions button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: var(--yk-text);
+}
+
+.yk-provider-card-actions button:last-child:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: var(--yk-error);
+}
+
+/* Preset Buttons */
+.yk-preset-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--yk-border);
+  border-radius: 8px;
+  color: var(--yk-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.yk-preset-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.yk-preset-emoji {
+  font-size: 16px;
+}
+
 /* Provider Form */
 .yk-provider-form {
   display: flex;

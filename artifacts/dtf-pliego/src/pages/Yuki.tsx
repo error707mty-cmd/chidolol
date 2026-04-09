@@ -1009,39 +1009,49 @@ export default function Yuki() {
             <div className="yk-modal-body">
               {/* Provider list */}
               <div className="yk-providers-list">
-                <label>Proveedores de IA</label>
-                {config?.providers.map(p => (
-                  <div key={p.id} className={`yk-provider-item ${p.id === config.activeProviderId ? 'active' : ''}`}>
-                    <button className="yk-provider-select" onClick={() => setActiveProvider(p.id)}>
-                      <div className="yk-provider-icon">
-                        <Cpu size={16} />
+                <label style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.6)', marginBottom: '12px', textTransform: 'uppercase' }}>Selecciona tu IA</label>
+                <div className="yk-providers-grid">
+                  {config?.providers.map(p => (
+                    <div 
+                      key={p.id} 
+                      className={`yk-provider-card ${p.id === config.activeProviderId ? 'yk-provider-card-active' : ''}`}
+                      onClick={() => setActiveProvider(p.id)}
+                    >
+                      <div className="yk-provider-card-icon">
+                        {p.name.toLowerCase().includes('deepseek') ? '🧠' :
+                         p.name.toLowerCase().includes('gpt') || p.name.toLowerCase().includes('openai') ? '🤖' :
+                         p.name.toLowerCase().includes('claude') ? '🎭' :
+                         p.name.toLowerCase().includes('groq') ? '⚡' : '✨'}
                       </div>
-                      <div className="yk-provider-info">
-                        <span className="yk-provider-name">{p.name}</span>
-                        <span className="yk-provider-model">{p.model}</span>
+                      <div className="yk-provider-card-body">
+                        <div className="yk-provider-card-name">{p.name}</div>
+                        <div className="yk-provider-card-model">{p.model}</div>
+                        {p.id === config.activeProviderId && (
+                          <div className="yk-provider-card-badge">
+                            <Check size={10} />
+                            <span>ACTIVO</span>
+                          </div>
+                        )}
                       </div>
-                      {p.id === config.activeProviderId && (
-                        <div className="yk-provider-check">
-                          <Check size={16} />
-                        </div>
-                      )}
-                    </button>
-                    <div className="yk-provider-actions">
-                      <button onClick={() => {
-                        setEditingProvider(p);
-                        setNewProviderForm({ name: p.name, model: p.model, apiKey: "", baseUrl: p.baseUrl || "" });
-                      }} title="Editar">
-                        <Key size={14} />
-                      </button>
-                      {config.providers.length > 1 && (
-                        <button onClick={() => deleteProvider(p.id)} title="Eliminar">
-                          <X size={14} />
+                      <div className="yk-provider-card-actions" onClick={e => e.stopPropagation()}>
+                        <button 
+                          onClick={() => {
+                            setEditingProvider(p);
+                            setNewProviderForm({ name: p.name, model: p.model, apiKey: "", baseUrl: p.baseUrl || "" });
+                          }} 
+                          title="Editar API Key"
+                        >
+                          <Key size={13} />
                         </button>
-                      )}
+                        {config.providers.length > 1 && (
+                          <button onClick={() => deleteProvider(p.id)} title="Eliminar">
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
 
               {/* Add/Edit provider form */}
               <div className="yk-provider-form">
@@ -1088,16 +1098,25 @@ export default function Yuki() {
 
               {/* Presets */}
               <div className="yk-presets">
-                <label>Presets populares</label>
+                <label>Agregar nuevo proveedor (Presets)</label>
                 <div className="yk-preset-buttons">
                   {[
+                    { name: "DeepSeek Coder V3", model: "deepseek-chat", baseUrl: "https://api.deepseek.com/v1" },
                     { name: "OpenAI GPT-4", model: "gpt-4-turbo", baseUrl: "https://api.openai.com/v1" },
-                    { name: "Claude 3", model: "claude-3-opus-20240229", baseUrl: "https://api.anthropic.com/v1" },
-                    { name: "DeepSeek", model: "deepseek-coder", baseUrl: "https://api.deepseek.com" },
-                    { name: "Groq", model: "llama-3.1-70b-versatile", baseUrl: "https://api.groq.com/openai/v1" },
+                    { name: "Claude 3.5 Sonnet", model: "claude-3-5-sonnet-20241022", baseUrl: "https://api.anthropic.com/v1" },
+                    { name: "Groq Llama", model: "llama-3.1-70b-versatile", baseUrl: "https://api.groq.com/openai/v1" },
                   ].map(preset => (
-                    <button key={preset.name} onClick={() => setNewProviderForm({ ...preset, apiKey: "" })}>
-                      {preset.name}
+                    <button 
+                      key={preset.name} 
+                      onClick={() => setNewProviderForm({ ...preset, apiKey: "" })}
+                      className="yk-preset-btn"
+                    >
+                      <span className="yk-preset-emoji">
+                        {preset.name.includes('DeepSeek') ? '🧠' :
+                         preset.name.includes('GPT') ? '🤖' :
+                         preset.name.includes('Claude') ? '🎭' : '⚡'}
+                      </span>
+                      <span>{preset.name}</span>
                     </button>
                   ))}
                 </div>

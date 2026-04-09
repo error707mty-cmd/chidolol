@@ -65,15 +65,15 @@ async function loadConfig(): Promise<YukiConfig> {
     }
     return config;
   } catch {
-    // Default config with DeepSeek
+    // Default config with DeepSeek V3
     const defaultConfig: YukiConfig = {
       providers: [
         {
           id: "deepseek-default",
-          name: "DeepSeek Coder",
-          model: "deepseek-coder",
+          name: "DeepSeek Coder V3",
+          model: "deepseek-chat",
           apiKey: process.env["DEEPSEEK_API_KEY"] || "",
-          baseUrl: "https://api.deepseek.com",
+          baseUrl: "https://api.deepseek.com/v1",
         },
       ],
       activeProviderId: "deepseek-default",
