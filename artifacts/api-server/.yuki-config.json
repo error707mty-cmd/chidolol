@@ -1,13 +1,12 @@
 {
+  "activeProviderId": "deepseek",
   "providers": [
     {
-      "id": "deepseek-default",
-      "name": "DeepSeek Coder",
-      "model": "deepseek-coder",
-      "apiKey": "sk-b26b3f46130348688e5eac9cc3d99513",
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "model": "deepseek-chat",
+      "apiKey": "sk-emergent-9E4013fC90b3803Ad8",
       "baseUrl": "https://api.deepseek.com"
     }
-  ],
-  "activeProviderId": "deepseek-default",
-  "lastUpdated": "2026-04-08T21:27:37.626Z"
+  ]
 }
