@@ -955,14 +955,32 @@ export default function Yuki() {
 
             <div className="yk-panel-content">
               {activePanel === "preview" && (
-                <div className="yk-preview">
-                  <iframe 
-                    ref={previewIframeRef}
-                    key={previewKey} 
-                    src={previewUrl} 
-                    title="Preview"
-                    onLoad={handlePreviewLoad}
-                  />
+                <div className="yk-preview-external">
+                  {devServerRunning ? (
+                    <>
+                      <div className="yk-preview-status">
+                        <div className="yk-preview-icon">🚀</div>
+                        <h3>Preview listo</h3>
+                        <p>Tu aplicación está corriendo en el puerto 3001</p>
+                      </div>
+                      <button 
+                        className="yk-preview-open-btn"
+                        onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}
+                      >
+                        <ExternalLink size={20} />
+                        <span>Abrir Preview en Nueva Pestaña</span>
+                      </button>
+                      <div className="yk-preview-hint">
+                        <span>💡 El preview se abrirá en una nueva ventana para mejor rendimiento</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="yk-preview-empty">
+                      <div className="yk-preview-icon">⏸️</div>
+                      <h3>Preview no disponible</h3>
+                      <p>Configura GitHub y clona un repositorio para ver el preview</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1008,7 +1026,7 @@ export default function Yuki() {
             
             <div className="yk-modal-body">
               {/* Provider list */}
-              {config?.providers && config.providers.length > 0 && (
+              {config?.providers && config.providers.length > 0 ? (
                 <div className="yk-providers-list">
                   <label style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.6)', marginBottom: '12px', textTransform: 'uppercase' }}>Selecciona tu IA</label>
                   <div className="yk-providers-grid">
@@ -1053,6 +1071,23 @@ export default function Yuki() {
                       </div>
                     ))}
                   </div>
+                </div>
+              ) : (
+                <div style={{ 
+                  padding: '24px', 
+                  background: 'rgba(59, 130, 246, 0.1)', 
+                  border: '1px solid rgba(59, 130, 246, 0.3)', 
+                  borderRadius: '12px',
+                  marginBottom: '20px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '32px', marginBottom: '12px' }}>🤖</div>
+                  <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)', marginBottom: '8px' }}>
+                    No hay IAs configuradas
+                  </h3>
+                  <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.5' }}>
+                    Agrega tu primera IA usando uno de los presets de abajo o configura una manualmente
+                  </p>
                 </div>
               )}
 
