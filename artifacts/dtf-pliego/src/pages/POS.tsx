@@ -78,7 +78,10 @@ export default function POSPage() {
   };
 
   useEffect(() => {
-    calculatePrice();
+    const timer = setTimeout(() => {
+      calculatePrice();
+    }, 300);
+    return () => clearTimeout(timer);
   }, [meters, selectedCustomer]);
 
   const handleSale = async () => {
