@@ -49,9 +49,11 @@ export const posInventoryTable = pgTable("pos_inventory", {
   id: serial("id").primaryKey(),
   productName: text("product_name").notNull(),
   description: text("description"),
+  imageUrl: text("image_url"),
   stock: numeric("stock", { precision: 10, scale: 2 }).notNull().default("0"),
   unit: text("unit").notNull().default("metros"), // metros, piezas, rollos, etc.
   cost: numeric("cost", { precision: 10, scale: 2 }).notNull().default("0"),
+  price: numeric("price", { precision: 10, scale: 2 }),
   lowStockAlert: numeric("low_stock_alert", { precision: 10, scale: 2 }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

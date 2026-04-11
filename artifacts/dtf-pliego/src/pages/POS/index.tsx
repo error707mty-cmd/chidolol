@@ -12,9 +12,8 @@ import HistoryTab from "./tabs/HistoryTab";
 import PricingTab from "./tabs/PricingTab";
 import SettingsTab from "./tabs/SettingsTab";
 import DashboardTab from "./tabs/DashboardTab";
-import CashRegisterTab from "./tabs/CashRegisterTab";
 
-type TabType = "dashboard" | "sale" | "customers" | "inventory" | "history" | "pricing" | "settings" | "cash";
+type TabType = "dashboard" | "sale" | "customers" | "inventory" | "history" | "pricing" | "settings";
 
 export default function POSPage() {
   const { logout } = useAuth();
@@ -22,7 +21,6 @@ export default function POSPage() {
 
   const tabs = [
     { id: "sale", label: "Vender", icon: ShoppingCart, color: "from-orange-500 to-pink-600" },
-    { id: "cash", label: "Caja", icon: DollarSign, color: "from-green-500 to-emerald-600" },
     { id: "customers", label: "Clientes", icon: Users, color: "from-blue-500 to-cyan-600" },
     { id: "inventory", label: "Inventario", icon: Package, color: "from-purple-500 to-violet-600" },
     { id: "pricing", label: "Precios", icon: FileText, color: "from-yellow-500 to-amber-600" },
@@ -92,7 +90,6 @@ export default function POSPage() {
       <main className="max-w-[1800px] mx-auto px-6 py-6">
         {activeTab === "dashboard" && <DashboardTab />}
         {activeTab === "sale" && <SaleTab />}
-        {activeTab === "cash" && <CashRegisterTab />}
         {activeTab === "customers" && <CustomersTab />}
         {activeTab === "inventory" && <InventoryTab />}
         {activeTab === "pricing" && <PricingTab />}
