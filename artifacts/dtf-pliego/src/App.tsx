@@ -13,7 +13,7 @@ import AdminUsers from "@/pages/AdminUsers";
 import AdminMemberships from "@/pages/AdminMemberships";
 import AdminAI from "@/pages/AdminAI";
 import AdminAsistente from "@/pages/AdminAsistente";
-import POS from "@/pages/POS";
+import POS from "@/pages/POS/index";
 import Profile from "@/pages/Profile";
 import Billing from "@/pages/Billing";
 import ChatAI from "@/pages/ChatAI";

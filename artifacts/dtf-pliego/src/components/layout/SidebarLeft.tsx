@@ -828,6 +828,25 @@ export function SidebarLeft({
           <span className="text-[11px] font-bold text-indigo-200 leading-none tracking-wide">Imprimir!</span>
           <span className="text-[9px] text-indigo-400/60 leading-none font-medium">Próximamente</span>
         </button>
+
+        {/* POS Button */}
+        {isPro && (
+          <Link href="/admin/pos">
+            <button
+              className="group relative w-full flex flex-col items-center justify-center gap-0.5 rounded-xl py-2.5 px-2 overflow-hidden transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,107,53,0.22) 0%, rgba(252,92,156,0.15) 100%)',
+                border: '1px solid rgba(255,107,53,0.5)',
+                boxShadow: '0 0 8px rgba(255,107,53,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+              }}
+              title="Punto de Venta"
+            >
+              <ShoppingCart className="h-4 w-4 text-orange-300 transition-transform duration-200 group-hover:-translate-y-0.5" />
+              <span className="text-[11px] font-bold text-orange-200 leading-none tracking-wide">POS</span>
+              <span className="text-[9px] text-orange-400/60 leading-none font-medium">Ventas</span>
+            </button>
+          </Link>
+        )}
       </div>
     </aside>
   );

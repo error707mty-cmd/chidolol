@@ -6,6 +6,7 @@ import {
   posSalesTable,
   posInventoryTable,
   posInventoryMovementsTable,
+  businessConfigTable,
 } from "@workspace/db";
 import { eq, and, gte, lte, sql, desc, or } from "drizzle-orm";
 import { requireAuth } from "../../middlewares/requireAuth";
@@ -502,6 +503,103 @@ router.get("/reports/range", async (req, res) => {
       totalMeters,
       sales,
     });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN DEL NEGOCIO
+// ══════════════════════════════════════════════════════════════════════════════
+
+// GET /api/admin/pos/config - Obtener configuración del negocio
+router.get("/config", async (req, res) => {
+  try {
+    const [config] = await db
+      .select()
+      .from(businessConfigTable)
+      .limit(1);
+
+    // Si no existe, crear configuración por defecto
+    if (!config) {
+      const [newConfig] = await db
+        .insert(businessConfigTable)
+        .values({
+          businessName: "DTF Pliego",
+          ticketHeader: "¡Gracias por tu compra!",
+          ticketFooter: "Conserva tu ticket para cualquier aclaración",
+        })
+        .returning();
+      
+      return res.json({ config: newConfig });
+    }
+
+    res.json({ config });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/admin/pos/config - Actualizar configuración del negocio
+router.put("/config", async (req, res) => {
+  try {
+    const {
+      businessName,
+      address,
+      phone,
+      email,
+      website,
+      rfc,
+      ticketHeader,
+      ticketFooter,
+      logoUrl,
+    } = req.body;
+
+    // Obtener config actual
+    const [currentConfig] = await db
+      .select()
+      .from(businessConfigTable)
+      .limit(1);
+
+    let config;
+    
+    if (!currentConfig) {
+      // Crear nueva config
+      [config] = await db
+        .insert(businessConfigTable)
+        .values({
+          businessName: businessName || "DTF Pliego",
+          address,
+          phone,
+          email,
+          website,
+          rfc,
+          ticketHeader,
+          ticketFooter,
+          logoUrl,
+        })
+        .returning();
+    } else {
+      // Actualizar config existente
+      [config] = await db
+        .update(businessConfigTable)
+        .set({
+          businessName,
+          address,
+          phone,
+          email,
+          website,
+          rfc,
+          ticketHeader,
+          ticketFooter,
+          logoUrl,
+          updatedAt: new Date(),
+        })
+        .where(eq(businessConfigTable.id, currentConfig.id))
+        .returning();
+    }
+
+    res.json({ config });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
