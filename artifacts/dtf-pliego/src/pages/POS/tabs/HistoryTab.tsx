@@ -54,55 +54,57 @@ export default function HistoryTab() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Historial de Ventas</h2>
+      <h2 className="text-2xl font-bold text-white">Historial de Ventas</h2>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Folio</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Cliente</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Metros</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Total</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Pago</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Fecha</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {sales.map((sale) => (
-              <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4">
-                  <span className="font-mono text-sm font-medium text-purple-600">
-                    {sale.folio}
-                  </span>
-                </td>
-                <td className="px-6 py-4 font-medium text-gray-900">
-                  {sale.customerName}
-                </td>
-                <td className="px-6 py-4 text-gray-600">
-                  {Number(sale.totalMeters).toFixed(2)} m
-                </td>
-                <td className="px-6 py-4 font-bold text-green-600">
-                  ${Number(sale.total).toFixed(2)}
-                </td>
-                <td className="px-6 py-4">
-                  <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700 capitalize">
-                    {sale.paymentMethod}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
-                  {format(new Date(sale.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
-                </td>
+      <div className="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-900 border-b border-gray-700">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Folio</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Cliente</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Metros</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Total</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Pago</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Fecha</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {sales.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            <Receipt className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p>No hay ventas registradas</p>
-          </div>
-        )}
+            </thead>
+            <tbody className="divide-y divide-gray-700">
+              {sales.map((sale) => (
+                <tr key={sale.id} className="hover:bg-gray-700/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <span className="font-mono text-sm font-medium text-indigo-400">
+                      {sale.folio}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 font-medium text-white">
+                    {sale.customerName}
+                  </td>
+                  <td className="px-6 py-4 text-gray-300">
+                    {Number(sale.totalMeters).toFixed(2)} m
+                  </td>
+                  <td className="px-6 py-4 font-bold text-green-400">
+                    ${Number(sale.total).toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-500/20 text-blue-300 capitalize">
+                      {sale.paymentMethod}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-400">
+                    {format(new Date(sale.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {sales.length === 0 && (
+            <div className="text-center py-12">
+              <Receipt className="w-12 h-12 mx-auto mb-2 text-gray-600" />
+              <p className="text-gray-400\">No hay ventas registradas</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

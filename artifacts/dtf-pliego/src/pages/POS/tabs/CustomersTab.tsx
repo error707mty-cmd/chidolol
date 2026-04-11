@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Plus, Edit, Trash2, Search, User } from "lucide-react";
+import { toast } from "sonner";
 
 const API_BASE = "/api";
 
@@ -17,6 +18,7 @@ interface Customer {
 export default function CustomersTab() {
   const { token } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,11 +42,23 @@ export default function CustomersTab() {
 
   const fetchCustomers = async () => {
     try {
+      setLoading(true);
+      console.log('Fetching customers with token:', token?.substring(0, 20));
       const res = await fetch(`${API_BASE}/admin/pos/customers`, { headers });
+      console.log('Response status:', res.status);
+      if (!res.ok) {
+        const errorData = await res.text();
+        console.error('Error response:', errorData);
+        throw new Error('Error al cargar clientes');
+      }
       const data = await res.json();
+      console.log('Clientes recibidos:', data);
       setCustomers(data.customers || []);
     } catch (err) {
       console.error("Error fetching customers:", err);
+      toast.error("Error al cargar clientes. Verifica tu conexión.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,21 +78,23 @@ export default function CustomersTab() {
         body: JSON.stringify(formData),
       });
 
-      if (res.ok) {
-        fetchCustomers();
-        setShowForm(false);
-        setEditingCustomer(null);
-        setFormData({
-          name: "",
-          email: "",
-          phone: "",
-          priceType: "normal",
-          customPricePerMeter: "",
-          notes: "",
-        });
-      }
+      if (!res.ok) throw new Error('Error al guardar');
+      
+      await fetchCustomers();
+      setShowForm(false);
+      setEditingCustomer(null);
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        priceType: "normal",
+        customPricePerMeter: "",
+        notes: "",
+      });
+      toast.success(editingCustomer ? "Cliente actualizado" : "Cliente creado");
     } catch (err) {
       console.error("Error saving customer:", err);
+      toast.error("Error al guardar cliente");
     }
   };
 
@@ -99,13 +115,16 @@ export default function CustomersTab() {
     if (!confirm("¿Estás seguro de eliminar este cliente?")) return;
 
     try {
-      await fetch(`${API_BASE}/admin/pos/customers/${id}`, {
+      const res = await fetch(`${API_BASE}/admin/pos/customers/${id}`, {
         method: "DELETE",
         headers,
       });
-      fetchCustomers();
+      if (!res.ok) throw new Error('Error al eliminar');
+      await fetchCustomers();
+      toast.success("Cliente eliminado");
     } catch (err) {
       console.error("Error deleting customer:", err);
+      toast.error("Error al eliminar cliente");
     }
   };
 
@@ -115,18 +134,26 @@ export default function CustomersTab() {
     c.phone?.includes(searchTerm)
   );
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-md w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar clientes..."
-            className="w-full pl-10 pr-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+            className="w-full pl-10 pr-4 py-3 rounded-lg bg-gray-800 border-2 border-gray-700 text-white focus:border-blue-500 focus:outline-none"
           />
         </div>
         <button
@@ -142,7 +169,7 @@ export default function CustomersTab() {
               notes: "",
             });
           }}
-          className="ml-4 flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-400 to-indigo-500 text-white rounded-lg font-medium hover:shadow-lg transition-all"
+          className="whitespace-nowrap flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg font-medium hover:shadow-lg transition-all"
         >
           <Plus className="w-5 h-5" />
           Nuevo Cliente
@@ -151,8 +178,8 @@ export default function CustomersTab() {
 
       {/* Form */}
       {showForm && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
+        <div className="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+          <h3 className="text-lg font-bold text-white mb-4">
             {editingCustomer ? "Editar Cliente" : "Nuevo Cliente"}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -163,26 +190,26 @@ export default function CustomersTab() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Nombre *"
                 required
-                className="px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                className="px-4 py-3 rounded-lg bg-gray-900 border-2 border-gray-700 text-white focus:border-blue-500 focus:outline-none"
               />
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="Email"
-                className="px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                className="px-4 py-3 rounded-lg bg-gray-900 border-2 border-gray-700 text-white focus:border-blue-500 focus:outline-none"
               />
               <input
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="Teléfono"
-                className="px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                className="px-4 py-3 rounded-lg bg-gray-900 border-2 border-gray-700 text-white focus:border-blue-500 focus:outline-none"
               />
               <select
                 value={formData.priceType}
                 onChange={(e) => setFormData({ ...formData, priceType: e.target.value })}
-                className="px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                className="px-4 py-3 rounded-lg bg-gray-900 border-2 border-gray-700 text-white focus:border-blue-500 focus:outline-none"
               >
                 <option value="normal">Normal</option>
                 <option value="revendedor">Revendedor</option>
@@ -197,7 +224,7 @@ export default function CustomersTab() {
                 value={formData.customPricePerMeter}
                 onChange={(e) => setFormData({ ...formData, customPricePerMeter: e.target.value })}
                 placeholder="Precio personalizado por metro"
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                className="w-full px-4 py-3 rounded-lg bg-gray-900 border-2 border-gray-700 text-white focus:border-blue-500 focus:outline-none"
               />
             )}
             <textarea
@@ -205,12 +232,12 @@ export default function CustomersTab() {
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               placeholder="Notas"
               rows={3}
-              className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+              className="w-full px-4 py-3 rounded-lg bg-gray-900 border-2 border-gray-700 text-white focus:border-blue-500 focus:outline-none"
             />
             <div className="flex gap-3">
               <button
                 type="submit"
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-400 to-indigo-500 text-white rounded-lg font-medium hover:shadow-lg transition-all"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg font-medium hover:shadow-lg transition-all"
               >
                 {editingCustomer ? "Actualizar" : "Crear"}
               </button>
@@ -220,7 +247,7 @@ export default function CustomersTab() {
                   setShowForm(false);
                   setEditingCustomer(null);
                 }}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
               >
                 Cancelar
               </button>
@@ -230,70 +257,72 @@ export default function CustomersTab() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Nombre</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Contacto</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Tipo de Precio</th>
-              <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredCustomers.map((customer) => (
-              <tr key={customer.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold">
-                      {customer.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{customer.name}</p>
-                      {customer.notes && (
-                        <p className="text-sm text-gray-500 truncate max-w-xs">{customer.notes}</p>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <p className="text-sm text-gray-900">{customer.email || "-"}</p>
-                  <p className="text-sm text-gray-500">{customer.phone || "-"}</p>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700 capitalize">
-                    {customer.priceType}
-                  </span>
-                  {customer.customPricePerMeter && (
-                    <p className="text-sm text-gray-500 mt-1">${customer.customPricePerMeter}/m</p>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => handleEdit(customer)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    >
-                      <Edit className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(customer.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                </td>
+      <div className="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-900 border-b border-gray-700">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Nombre</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Contacto</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Tipo de Precio</th>
+                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-300">Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {filteredCustomers.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            <User className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p>No se encontraron clientes</p>
-          </div>
-        )}
+            </thead>
+            <tbody className="divide-y divide-gray-700">
+              {filteredCustomers.map((customer) => (
+                <tr key={customer.id} className="hover:bg-gray-700/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-600 flex items-center justify-center text-white font-bold">
+                        {customer.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-medium text-white">{customer.name}</p>
+                        {customer.notes && (
+                          <p className="text-sm text-gray-400 truncate max-w-xs">{customer.notes}</p>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-sm text-gray-300">{customer.email || "-"}</p>
+                    <p className="text-sm text-gray-400">{customer.phone || "-"}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-500/20 text-blue-300 capitalize">
+                      {customer.priceType}
+                    </span>
+                    {customer.customPricePerMeter && (
+                      <p className="text-sm text-gray-400 mt-1">${customer.customPricePerMeter}/m</p>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleEdit(customer)}
+                        className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(customer.id)}
+                        className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {filteredCustomers.length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              <User className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>No se encontraron clientes</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
