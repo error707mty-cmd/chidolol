@@ -468,16 +468,34 @@ const TOOLS: { name: string; description: string; input_schema: Record<string, u
   // ── IA ──
   {
     name: "get_ai_config",
-    description: "Configuración del servidor IA (IS-Net, luma-key, upscaling, nitidez, alpha).",
+    description: `Lee la configuración actual del servidor IA (puerto 8765). Retorna todos los parámetros ajustables:
+- Background removal (remove_bg_mode, bg_dark_threshold, luma_*, isnet_*)
+- Upscaling (denoise_*, sharpen_*, chroma_boost, contrast_l, vibrance_amount, clahe_*)
+- Alpha channel (alpha_clean_threshold, alpha_erode_size, alpha_feather_sigma)
+Úsalo SIEMPRE antes de update_ai_config para ver los valores actuales.`,
     input_schema: { type: "object" as const, properties: {}, required: [] },
   },
   {
     name: "update_ai_config",
-    description: "Actualiza parámetros del servidor IA en tiempo real sin reinicio.",
+    description: `Actualiza parámetros del servidor IA en tiempo real (sin reinicio). 
+IMPORTANTE: Solo envía los parámetros que quieres cambiar, no todos.
+Ejemplos de parámetros válidos:
+- remove_bg_mode: 0=auto, 1=luma-key, 2=IS-Net
+- bg_dark_threshold: 0-150 (umbral de brillo para detectar fondo oscuro)
+- luma_diff_threshold: 0-120 (diferencia mínima de color para luma-key)
+- isnet_max_px: 128-1024 (resolución máxima para inferencia IS-Net)
+- sharpen_amount_fine: 0-2.5 (intensidad de nitidez fina)
+- chroma_boost: 0-0.8 (saturación de color)
+- clahe_enabled: 0|1 (contraste local adaptativo)
+Retorna la configuración actualizada completa.`,
     input_schema: {
       type: "object" as const,
       properties: {
-        params: { type: "object", additionalProperties: { type: "number" } },
+        params: { 
+          type: "object", 
+          additionalProperties: { type: "number" },
+          description: "Solo los parámetros que quieres modificar. Ej: {\"sharpen_amount_fine\": 0.8, \"chroma_boost\": 0.15}"
+        },
       },
       required: ["params"],
     },
@@ -774,11 +792,32 @@ DB principal (tabla users):
 HERRAMIENTAS DISPONIBLES
 ═══════════════════════════════════════════════════════════════
 Usuarios/Stats: list_users, update_user, get_app_stats, list_recent_activity
-IA config:      get_ai_config, update_ai_config
+IA config:      get_ai_config, update_ai_config (ACCESO COMPLETO - puedes leer y modificar TODOS los parámetros del servidor IA)
 SQL directo:    execute_sql (usa $1,$2... para parámetros)
 Código:         list_files, read_file, write_file, search_in_files, grep_file
 Sistema:        exec_shell, install_package, restart_backend
 Aprendizaje:    read_knowledge, update_knowledge, append_knowledge
+
+IMPORTANTE SOBRE CONFIGURACIÓN DE IA:
+Tienes CONTROL TOTAL sobre el servidor de IA (puerto 8765). Puedes:
+✓ Leer configuración actual con get_ai_config
+✓ Modificar CUALQUIER parámetro con update_ai_config
+✓ Ajustar background removal (luma-key, IS-Net)
+✓ Modificar upscaling (nitidez, denoise, color, contraste)
+✓ Configurar procesamiento de alpha channel
+Los cambios aplican EN TIEMPO REAL sin reiniciar nada.
+
+Cuando el usuario te pida "ajusta la nitidez", "mejora el color", "haz que el fondo se elimine mejor", etc:
+1. Usa get_ai_config para ver valores actuales
+2. Analiza qué parámetros necesitas cambiar
+3. Usa update_ai_config con los nuevos valores
+4. Confirma el cambio al usuario
+
+Ejemplo de uso:
+Usuario: "aumenta la nitidez un poco"
+Tú: [llamas get_ai_config, ves sharpen_amount_fine: 0.6]
+    [llamas update_ai_config con {"sharpen_amount_fine": 0.75}]
+    "Listo, aumenté la nitidez fina de 0.6 a 0.75"
 
 ═══════════════════════════════════════════════════════════════
 REGLAS ABSOLUTAS
