@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { 
   Plus, User, DollarSign, Receipt, ShoppingBag, Package, 
-  Trash2, X, Check, Sparkles, Zap, ChevronRight, Search
+  Trash2, X, Check, Sparkles, Zap, ChevronRight, Search, Download, Printer
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -33,7 +33,6 @@ interface CartItem {
   quantity: number;
   price: number;
   total: number;
-  productId?: number;
 }
 
 interface BusinessConfig {
@@ -64,6 +63,7 @@ export default function SaleTab() {
   const [productSearch, setProductSearch] = useState("");
   const [customerForm, setCustomerForm] = useState({ name: "", phone: "", priceType: "normal" });
   const [folio, setFolio] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 
@@ -125,7 +125,7 @@ export default function SaleTab() {
     }]);
     setMetersForm({ quantity: "", price: "" });
     setShowAddMeters(false);
-    toast.success("Metros agregados");
+    toast.success("Agregado al carrito");
   };
 
   const addProductToCart = (product: InventoryItem) => {
@@ -133,7 +133,7 @@ export default function SaleTab() {
     const price = Number(product.price) || Number(product.cost);
     setCart([...cart, {
       id: `product-${Date.now()}`, type: 'producto', name: product.productName,
-      quantity, price, total: quantity * price, productId: product.id,
+      quantity, price, total: quantity * price,
     }]);
     setShowAddProduct(false);
     toast.success("Producto agregado");
@@ -152,7 +152,7 @@ export default function SaleTab() {
       setCustomerForm({ name: "", phone: "", priceType: "normal" });
       setShowAddCustomer(false);
       toast.success("Cliente creado");
-    } catch (err) { toast.error("Error"); }
+    } catch (err) { toast.error("Error al crear cliente"); }
   };
 
   const updateCartItem = (id: string, field: 'quantity' | 'price', value: number) => {
@@ -172,61 +172,137 @@ export default function SaleTab() {
   };
 
   const handleSale = async () => {
-    if (cart.length === 0) { toast.error("Carrito vacío"); return; }
+    if (cart.length === 0) { 
+      toast.error("El carrito está vacío"); 
+      return; 
+    }
+
+    setLoading(true);
     try {
-      for (const item of cart) {
-        if (item.type === 'metros') {
-          await fetch(`${API_BASE}/admin/pos/sales`, {
-            method: "POST", headers,
-            body: JSON.stringify({
-              customerId: selectedCustomer?.id,
-              customerName: selectedCustomer?.name || "Cliente General",
-              totalMeters: item.quantity, pricePerMeter: item.price,
-              subtotal: item.total, total: item.total, paymentMethod,
-            }),
-          });
-        }
+      const totalVenta = cart.reduce((sum, item) => sum + item.total, 0);
+      const subtotalVenta = totalVenta / 1.16;
+      const ivaVenta = totalVenta - subtotalVenta;
+      
+      // Generar folio único
+      const folioGenerated = `DTF${Date.now().toString().slice(-8)}`;
+      
+      // Registrar venta (por ahora solo metros)
+      const metrosItems = cart.filter(i => i.type === 'metros');
+      
+      if (metrosItems.length > 0) {
+        const totalMeters = metrosItems.reduce((sum, i) => sum + i.quantity, 0);
+        const avgPrice = metrosItems.reduce((sum, i) => sum + (i.price * i.quantity), 0) / totalMeters;
+        
+        const res = await fetch(`${API_BASE}/admin/pos/sales`, {
+          method: "POST", headers,
+          body: JSON.stringify({
+            customerId: selectedCustomer?.id,
+            customerName: selectedCustomer?.name || "Cliente General",
+            totalMeters: totalMeters,
+            pricePerMeter: avgPrice,
+            subtotal: totalVenta,
+            total: totalVenta,
+            paymentMethod,
+            folio: folioGenerated,
+          }),
+        });
+
+        if (!res.ok) throw new Error('Error al registrar venta');
       }
-      setFolio(`DTF${Date.now().toString().slice(-8)}`);
+
+      setFolio(folioGenerated);
       setShowTicket(true);
-      toast.success("¡Venta registrada!");
-    } catch (err) { toast.error("Error"); }
+      toast.success("¡Venta registrada! Folio: " + folioGenerated);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al registrar venta");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetSale = () => {
-    setCart([]); setSelectedCustomer(null); setPaymentMethod("efectivo");
-    setShowTicket(false); setFolio("");
+    setCart([]); 
+    setSelectedCustomer(null); 
+    setPaymentMethod("efectivo");
+    setShowTicket(false); 
+    setFolio("");
+    toast.success("Listo para nueva venta");
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
-  const iva = subtotal * 0.16;
-  const total = subtotal + iva;
+  const total = cart.reduce((sum, item) => sum + item.total, 0);
+  const subtotal = total / 1.16;
+  const iva = total - subtotal;
 
   const filteredProducts = inventory.filter(p =>
     p.productName.toLowerCase().includes(productSearch.toLowerCase())
   );
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadTicket = () => {
+    const ticketText = `
+${config.businessName}
+${config.address || ''}
+${config.phone ? 'Tel: ' + config.phone : ''}
+${config.rfc ? 'RFC: ' + config.rfc : ''}
+
+================================
+Folio: ${folio}
+${format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })}
+================================
+
+Cliente: ${selectedCustomer?.name || 'Cliente General'}
+
+${cart.map(item => `${item.name}
+  ${item.quantity} x $${item.price.toFixed(2)} = $${item.total.toFixed(2)}`).join('\n\n')}
+
+================================
+Subtotal:     $${subtotal.toFixed(2)}
+IVA (16%):    $${iva.toFixed(2)}
+================================
+TOTAL:        $${total.toFixed(2)}
+================================
+
+Pago: ${paymentMethod.toUpperCase()}
+
+${config.ticketFooter || ''}
+    `;
+
+    const blob = new Blob([ticketText], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ticket-${folio}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 h-[calc(100vh-12rem)]">
       <div className="xl:col-span-2 space-y-3 overflow-y-auto pr-2">
-        {/* Cliente + Métodos de Pago - Horizontal */}
+        {/* Cliente + Métodos de Pago */}
         <div className="grid grid-cols-2 gap-3">
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl opacity-20 group-hover:opacity-40 blur transition duration-300"></div>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl opacity-20 group-hover:opacity-40 blur-sm transition-all duration-300"></div>
             <div className="relative bg-gray-800/90 backdrop-blur-xl rounded-xl p-3 border border-gray-700/50">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                   <User className="w-4 h-4 text-blue-400" />Cliente
                 </h3>
                 <button onClick={() => setShowAddCustomer(true)}
-                  className="px-2 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded text-xs font-medium hover:shadow-lg hover:shadow-blue-500/50 transition-all"
+                  className="px-2 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded text-xs font-medium hover:shadow-lg hover:shadow-blue-500/50 transition-all duration-300 transform hover:scale-105"
                 >
                   <Plus className="w-3 h-3" />
                 </button>
               </div>
               <select value={selectedCustomer?.id || ""}
                 onChange={(e) => setSelectedCustomer(customers.find(c => c.id === Number(e.target.value)) || null)}
-                className="w-full px-2 py-1.5 text-sm rounded-lg bg-gray-900/50 border border-gray-700/50 text-white focus:border-blue-500 focus:outline-none"
+                className="w-full px-2 py-1.5 text-sm rounded-lg bg-gray-900/50 border border-gray-700/50 text-white focus:border-blue-500 focus:outline-none transition-all duration-300"
               >
                 <option value="">General</option>
                 {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -235,19 +311,19 @@ export default function SaleTab() {
           </div>
 
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl opacity-20 group-hover:opacity-40 blur transition duration-300"></div>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl opacity-20 group-hover:opacity-40 blur-sm transition-all duration-300"></div>
             <div className="relative bg-gray-800/90 backdrop-blur-xl rounded-xl p-3 border border-gray-700/50">
               <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-1.5">
                 <DollarSign className="w-4 h-4 text-green-400" />Pago
               </h3>
               <div className="flex gap-1.5">
-                {['efectivo', 'tarjeta', 'transfer'].map((m) => (
-                  <button key={m} onClick={() => setPaymentMethod(m === 'transfer' ? 'transferencia' : m)}
-                    className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-                      paymentMethod === (m === 'transfer' ? 'transferencia' : m)
-                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg'
-                        : 'bg-gray-700/50 text-gray-300'
-                    }`}>{m}
+                {[{ val: 'efectivo', label: 'Efectivo' }, { val: 'tarjeta', label: 'Tarjeta' }, { val: 'transferencia', label: 'Transfer' }].map((m) => (
+                  <button key={m.val} onClick={() => setPaymentMethod(m.val)}
+                    className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 transform ${
+                      paymentMethod === m.val
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg scale-105'
+                        : 'bg-gray-700/50 text-gray-300 hover:scale-105'
+                    }`}>{m.label}
                   </button>
                 ))}
               </div>
@@ -257,7 +333,7 @@ export default function SaleTab() {
 
         {/* Carrito */}
         <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500 to-pink-500 rounded-xl opacity-20 blur transition duration-300"></div>
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500 to-pink-500 rounded-xl opacity-20 blur-sm transition-all duration-300"></div>
           <div className="relative bg-gray-800/90 backdrop-blur-xl rounded-xl p-3 border border-gray-700/50">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
@@ -265,12 +341,12 @@ export default function SaleTab() {
               </h3>
               <div className="flex gap-1.5">
                 <button onClick={() => setShowAddMeters(true)}
-                  className="px-2 py-1 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded text-xs font-medium hover:shadow-lg transition-all flex items-center gap-1"
+                  className="px-2 py-1 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded text-xs font-medium hover:shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-1"
                 >
                   <Zap className="w-3 h-3" />Metros
                 </button>
                 <button onClick={() => setShowAddProduct(true)}
-                  className="px-2 py-1 bg-gradient-to-r from-purple-500 to-violet-500 text-white rounded text-xs font-medium hover:shadow-lg transition-all flex items-center gap-1"
+                  className="px-2 py-1 bg-gradient-to-r from-purple-500 to-violet-500 text-white rounded text-xs font-medium hover:shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-1"
                 >
                   <Package className="w-3 h-3" />Producto
                 </button>
@@ -280,13 +356,13 @@ export default function SaleTab() {
             {cart.length === 0 ? (
               <div className="text-center py-6 text-gray-500">
                 <ShoppingBag className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p className="text-xs">Agrega items</p>
+                <p className="text-xs">Carrito vacío</p>
               </div>
             ) : (
               <div className="space-y-1.5 max-h-60 overflow-y-auto">
                 {cart.map((item) => (
                   <div key={item.id}
-                    className="bg-gray-900/50 rounded-lg p-2 border border-gray-700/50 hover:border-orange-500/50 transition-all"
+                    className="bg-gray-900/50 rounded-lg p-2 border border-gray-700/50 hover:border-orange-500/50 transition-all duration-300"
                   >
                     <div className="flex items-start gap-2">
                       <div className="flex-1">
@@ -299,14 +375,14 @@ export default function SaleTab() {
                             <label className="text-[10px] text-gray-400 block">Cant</label>
                             <input type="number" step="0.01" value={item.quantity}
                               onChange={(e) => updateCartItem(item.id, 'quantity', Number(e.target.value))}
-                              className="w-full px-1.5 py-1 rounded text-xs bg-gray-800 border border-gray-700 text-white focus:border-orange-500 focus:outline-none"
+                              className="w-full px-1.5 py-1 rounded text-xs bg-gray-800 border border-gray-700 text-white focus:border-orange-500 focus:outline-none transition-colors"
                             />
                           </div>
                           <div>
                             <label className="text-[10px] text-gray-400 block">$</label>
                             <input type="number" step="0.01" value={item.price}
                               onChange={(e) => updateCartItem(item.id, 'price', Number(e.target.value))}
-                              className="w-full px-1.5 py-1 rounded text-xs bg-gray-800 border border-gray-700 text-white focus:border-orange-500 focus:outline-none"
+                              className="w-full px-1.5 py-1 rounded text-xs bg-gray-800 border border-gray-700 text-white focus:border-orange-500 focus:outline-none transition-colors"
                             />
                           </div>
                           <div>
@@ -335,7 +411,7 @@ export default function SaleTab() {
       <div className="space-y-3 overflow-y-auto pr-2">
         <div className="sticky top-0">
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 rounded-xl opacity-30 blur transition duration-300 animate-pulse"></div>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 rounded-xl opacity-30 blur-sm animate-pulse"></div>
             <div className="relative bg-gradient-to-br from-gray-800 to-gray-900 backdrop-blur-xl rounded-xl p-4 border border-gray-700/50">
               <div className="flex items-center gap-1.5 mb-2">
                 <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
@@ -351,17 +427,23 @@ export default function SaleTab() {
                 <div className="flex justify-between"><span className="text-gray-400">IVA (16%):</span><span className="text-white">${iva.toFixed(2)}</span></div>
               </div>
 
-              <button onClick={handleSale} disabled={cart.length === 0}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white rounded-lg font-bold text-sm hover:shadow-2xl transition-all disabled:opacity-50 group"
+              <button onClick={handleSale} disabled={cart.length === 0 || loading}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white rounded-lg font-bold text-sm hover:shadow-2xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed group"
               >
-                <Receipt className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-                Registrar
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                {loading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <>
+                    <Receipt className="w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
+                    Registrar
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                  </>
+                )}
               </button>
             </div>
           </div>
 
-          {showTicket && <TicketPreview config={config} cart={cart} folio={folio} customer={selectedCustomer} paymentMethod={paymentMethod} subtotal={subtotal} iva={iva} total={total} onReset={resetSale} />}
+          {showTicket && <TicketPreview config={config} cart={cart} folio={folio} customer={selectedCustomer} paymentMethod={paymentMethod} subtotal={subtotal} iva={iva} total={total} onReset={resetSale} onPrint={handlePrint} onDownload={handleDownloadTicket} />}
         </div>
       </div>
 
@@ -373,11 +455,11 @@ export default function SaleTab() {
   );
 }
 
-function TicketPreview({ config, cart, folio, customer, paymentMethod, subtotal, iva, total, onReset }: any) {
+function TicketPreview({ config, cart, folio, customer, paymentMethod, subtotal, iva, total, onReset, onPrint, onDownload }: any) {
   return (
     <div className="mt-3 bg-gray-800/90 backdrop-blur-xl rounded-xl p-3 border border-gray-700/50">
-      <h3 className="text-sm font-bold text-white mb-2">Ticket</h3>
-      <div className="bg-white rounded-lg p-3 font-mono text-[10px] text-black max-h-64 overflow-y-auto">
+      <h3 className="text-sm font-bold text-white mb-2">Ticket - {folio}</h3>
+      <div className="bg-white rounded-lg p-3 font-['Courier_New',monospace] text-[10px] text-black max-h-64 overflow-y-auto">
         {config.logoUrl && <img src={config.logoUrl} alt="Logo" className="w-16 h-16 mx-auto mb-2 object-contain" />}
         <div className="text-center border-b border-dashed border-gray-300 pb-2 mb-2">
           <h3 className="text-sm font-bold">{config.businessName}</h3>
@@ -413,8 +495,20 @@ function TicketPreview({ config, cart, folio, customer, paymentMethod, subtotal,
           {config.ticketFooter && <p className="mt-1">{config.ticketFooter}</p>}
         </div>
       </div>
+      <div className="flex gap-2 mt-2">
+        <button onClick={onPrint}
+          className="flex-1 px-2 py-2 bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-lg text-xs font-medium hover:shadow-lg transition-all transform hover:scale-105 flex items-center justify-center gap-1"
+        >
+          <Printer className="w-3 h-3" />Imprimir
+        </button>
+        <button onClick={onDownload}
+          className="flex-1 px-2 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg text-xs font-medium hover:shadow-lg transition-all transform hover:scale-105 flex items-center justify-center gap-1"
+        >
+          <Download className="w-3 h-3" />TXT
+        </button>
+      </div>
       <button onClick={onReset}
-        className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg text-xs font-medium hover:shadow-lg transition-all flex items-center justify-center gap-1.5"
+        className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg text-xs font-medium hover:shadow-lg transition-all transform hover:scale-105 flex items-center justify-center gap-1.5"
       >
         <Check className="w-3.5 h-3.5" />Nueva Venta
       </button>
@@ -450,7 +544,7 @@ function MetersModal({ form, setForm, onAdd, onClose }: any) {
             />
           </div>
           <button onClick={onAdd}
-            className="w-full px-4 py-2.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-lg font-bold text-sm hover:shadow-lg transition-all"
+            className="w-full px-4 py-2.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-lg font-bold text-sm hover:shadow-lg transition-all transform hover:scale-105"
           >
             Agregar
           </button>
@@ -483,7 +577,7 @@ function ProductsModal({ products, search, setSearch, onSelect, onClose }: any) 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {products.map((product: any) => (
               <button key={product.id} onClick={() => onSelect(product)}
-                className="group relative bg-gray-900/50 rounded-xl p-3 border border-gray-700/50 hover:border-purple-500/50 transition-all text-left"
+                className="group relative bg-gray-900/50 rounded-xl p-3 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300 transform hover:scale-105 text-left"
               >
                 <div className="aspect-square rounded-lg overflow-hidden mb-2 bg-gray-800">
                   {product.imageUrl ? (
@@ -540,7 +634,7 @@ function CustomerModal({ form, setForm, onCreate, onClose }: any) {
             <option value="especial">Especial</option>
           </select>
           <button onClick={onCreate}
-            className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-bold text-sm hover:shadow-lg transition-all"
+            className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-bold text-sm hover:shadow-lg transition-all transform hover:scale-105"
           >
             Crear
           </button>
