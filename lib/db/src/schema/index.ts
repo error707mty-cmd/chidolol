@@ -3,3 +3,4 @@ export * from "./pliegos";
 export * from "./pliego_images";
 export * from "./users";
 export * from "./yuki_conversations";
+export * from "./pos";

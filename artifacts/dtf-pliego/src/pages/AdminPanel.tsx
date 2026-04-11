@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Link } from "wouter";
 import { LogoMark } from "@/components/LogoMark";
-import { LayoutDashboard, CreditCard, Users, Brain, Bot, ChevronLeft, LogOut } from "lucide-react";
+import { LayoutDashboard, CreditCard, Users, Brain, Bot, ChevronLeft, LogOut, ShoppingCart } from "lucide-react";
 
 interface UserEntry {
   id: number;
@@ -89,6 +89,10 @@ export default function AdminPanel() {
           <Link href="/admin/usuarios" className="jl-admin-link">
             <Users size={13} />
             Usuarios
+          </Link>
+          <Link href="/admin/pos" className="jl-admin-link" style={{ background: "rgba(34,197,94,0.15)", borderColor: "rgba(74,222,128,0.4)" }}>
+            <ShoppingCart size={13} />
+            POS
           </Link>
           <Link href="/admin/ia" className="jl-admin-link jl-admin-link--ai">
             <Brain size={13} />
