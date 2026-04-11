@@ -10,6 +10,7 @@ import {
 } from "@workspace/db";
 import { eq, and, gte, lte, sql, desc, or } from "drizzle-orm";
 import { requireAuth } from "../../middlewares/requireAuth";
+import { ThermalPrinter } from "../../lib/thermal-printer";
 
 const router = express.Router();
 
@@ -355,6 +356,48 @@ router.post("/sales", async (req, res) => {
       .returning();
 
     res.json({ sale });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/pos/thermal-print - Generar comandos para impresión térmica
+router.post("/thermal-print", async (req, res) => {
+  try {
+    const { saleId, items } = req.body;
+
+    // Obtener configuración del negocio
+    const [config] = await db.select().from(businessConfigTable).limit(1);
+
+    // Obtener venta si se proporciona saleId
+    let sale;
+    if (saleId) {
+      [sale] = await db.select().from(posSalesTable).where(eq(posSalesTable.id, saleId));
+    }
+
+    const ticketData = {
+      folio: sale?.folio || req.body.folio || 'TEMP',
+      businessName: config?.businessName || 'DTF Pliego',
+      address: config?.address,
+      phone: config?.phone,
+      rfc: config?.rfc,
+      customerName: sale?.customerName || req.body.customerName || 'Cliente General',
+      items: items || [],
+      subtotal: Number(req.body.subtotal || 0),
+      iva: Number(req.body.iva || 0),
+      total: Number(req.body.total || sale?.total || 0),
+      paymentMethod: req.body.paymentMethod || sale?.paymentMethod || 'efectivo',
+      ticketHeader: config?.ticketHeader,
+      ticketFooter: config?.ticketFooter,
+    };
+
+    const thermalCommands = ThermalPrinter.generateBase64Commands(ticketData);
+
+    res.json({
+      success: true,
+      commands: thermalCommands,
+      rawText: ThermalPrinter.generateTicket(ticketData),
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

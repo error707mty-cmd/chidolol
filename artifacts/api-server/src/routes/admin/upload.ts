@@ -2,8 +2,12 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import { promises as fs } from "fs";
+import { requireAuth } from "../../middlewares/requireAuth";
 
 const router = express.Router();
+
+// Require authentication for uploads
+router.use(requireAuth);
 
 // Configurar multer para guardar archivos
 const storage = multer.diskStorage({

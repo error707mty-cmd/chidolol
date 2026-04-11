@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Save, Settings as SettingsIcon } from "lucide-react";
+import { Save, Settings as SettingsIcon, Upload, Image } from "lucide-react";
 import { toast } from "sonner";
 
 const API_BASE = "/api";
@@ -25,6 +25,7 @@ export default function SettingsTab() {
     ticketFooter: "Conserva tu ticket para cualquier aclaración",
   });
   const [loading, setLoading] = useState(true);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const headers = {
     "Content-Type": "application/json",
@@ -71,6 +72,33 @@ export default function SettingsTab() {
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const res = await fetch(`${API_BASE}/admin/upload/image`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error('Error al subir imagen');
+      const data = await res.json();
+      setConfig({ ...config, logoUrl: data.imageUrl });
+      toast.success('Logo subido correctamente');
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al subir logo');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -80,117 +108,101 @@ export default function SettingsTab() {
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-        <SettingsIcon className="w-7 h-7 text-yellow-500" />
-        Configuración del Negocio
-      </h2>
+    <div className="space-y-4 h-[calc(100vh-12rem)] overflow-y-auto pr-2">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Logo Upload */}
+        <div className="relative group">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-xl opacity-20 blur-sm"></div>
+          <div className="relative bg-gray-800/90 backdrop-blur-xl rounded-xl p-4 border border-gray-700/50">
+            <div className="flex items-center gap-2 mb-3">
+              <Image className="w-4 h-4 text-yellow-400" />
+              <h3 className="text-sm font-bold text-white">Logo del Negocio</h3>
+            </div>
+            <div className="flex items-center gap-3">
+              {config.logoUrl && (
+                <img src={config.logoUrl} alt="Logo" className="w-16 h-16 rounded-lg object-contain bg-gray-900 border border-gray-700 p-1" />
+              )}
+              <label className="flex-1 cursor-pointer">
+                <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-amber-600 text-white rounded-lg text-xs font-medium hover:shadow-lg transition-all">
+                  <Upload className="w-3.5 h-3.5" />
+                  {uploadingLogo ? 'Subiendo...' : 'Subir Logo'}
+                </div>
+                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" disabled={uploadingLogo} />
+              </label>
+            </div>
+          </div>
+        </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Business Info */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Información del Negocio</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nombre del Negocio</label>
-              <input
-                type="text"
-                value={config.businessName}
+        <div className="relative group">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl opacity-20 blur-sm"></div>
+          <div className="relative bg-gray-800/90 backdrop-blur-xl rounded-xl p-4 border border-gray-700/50">
+            <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              <SettingsIcon className="w-4 h-4 text-blue-400" />
+              Información del Negocio
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input type="text" value={config.businessName}
                 onChange={(e) => setConfig({ ...config, businessName: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-500 focus:outline-none"
+                placeholder="Nombre del Negocio"
+                className="px-3 py-2 text-sm rounded-lg bg-gray-900 border border-gray-700 text-white focus:border-blue-500 focus:outline-none transition-colors"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">RFC</label>
-              <input
-                type="text"
-                value={config.rfc || ""}
+              <input type="text" value={config.rfc || ""}
                 onChange={(e) => setConfig({ ...config, rfc: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-500 focus:outline-none"
+                placeholder="RFC"
+                className="px-3 py-2 text-sm rounded-lg bg-gray-900 border border-gray-700 text-white focus:border-blue-500 focus:outline-none transition-colors"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
-              <input
-                type="tel"
-                value={config.phone || ""}
+              <input type="tel" value={config.phone || ""}
                 onChange={(e) => setConfig({ ...config, phone: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-500 focus:outline-none"
+                placeholder="Teléfono"
+                className="px-3 py-2 text-sm rounded-lg bg-gray-900 border border-gray-700 text-white focus:border-blue-500 focus:outline-none transition-colors"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-              <input
-                type="email"
-                value={config.email || ""}
+              <input type="email" value={config.email || ""}
                 onChange={(e) => setConfig({ ...config, email: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-500 focus:outline-none"
+                placeholder="Email"
+                className="px-3 py-2 text-sm rounded-lg bg-gray-900 border border-gray-700 text-white focus:border-blue-500 focus:outline-none transition-colors"
               />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Dirección</label>
-              <input
-                type="text"
-                value={config.address || ""}
+              <input type="text" value={config.address || ""}
                 onChange={(e) => setConfig({ ...config, address: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-500 focus:outline-none"
+                placeholder="Dirección"
+                className="md:col-span-2 px-3 py-2 text-sm rounded-lg bg-gray-900 border border-gray-700 text-white focus:border-blue-500 focus:outline-none transition-colors"
               />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Sitio Web</label>
-              <input
-                type="url"
-                value={config.website || ""}
+              <input type="url" value={config.website || ""}
                 onChange={(e) => setConfig({ ...config, website: e.target.value })}
-                placeholder="https://"
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-500 focus:outline-none"
+                placeholder="Sitio Web"
+                className="md:col-span-2 px-3 py-2 text-sm rounded-lg bg-gray-900 border border-gray-700 text-white focus:border-blue-500 focus:outline-none transition-colors"
               />
             </div>
           </div>
         </div>
 
         {/* Ticket Configuration */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Configuración de Tickets</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Encabezado del Ticket</label>
-              <input
-                type="text"
-                value={config.ticketHeader || ""}
+        <div className="relative group">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-violet-500 rounded-xl opacity-20 blur-sm"></div>
+          <div className="relative bg-gray-800/90 backdrop-blur-xl rounded-xl p-4 border border-gray-700/50">
+            <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              <Save className="w-4 h-4 text-purple-400" />
+              Configuración de Tickets
+            </h3>
+            <div className="space-y-3">
+              <input type="text" value={config.ticketHeader || ""}
                 onChange={(e) => setConfig({ ...config, ticketHeader: e.target.value })}
-                placeholder="Texto que aparecerá al inicio del ticket"
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-500 focus:outline-none"
+                placeholder="Encabezado del Ticket"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-gray-900 border border-gray-700 text-white focus:border-purple-500 focus:outline-none transition-colors"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Pie del Ticket</label>
-              <input
-                type="text"
-                value={config.ticketFooter || ""}
+              <input type="text" value={config.ticketFooter || ""}
                 onChange={(e) => setConfig({ ...config, ticketFooter: e.target.value })}
-                placeholder="Texto que aparecerá al final del ticket"
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">URL del Logo (opcional)</label>
-              <input
-                type="url"
-                value={config.logoUrl || ""}
-                onChange={(e) => setConfig({ ...config, logoUrl: e.target.value })}
-                placeholder="https://ejemplo.com/logo.png"
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-500 focus:outline-none"
+                placeholder="Pie del Ticket"
+                className="w-full px-3 py-2 text-sm rounded-lg bg-gray-900 border border-gray-700 text-white focus:border-purple-500 focus:outline-none transition-colors"
               />
             </div>
           </div>
         </div>
 
-        <button
-          type="submit"
-          className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-white rounded-lg font-bold text-lg hover:shadow-lg transition-all"
+        <button type="submit"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-white rounded-lg font-bold text-sm hover:shadow-lg transition-all transform hover:scale-105"
         >
-          <Save className="w-6 h-6" />
+          <Save className="w-4 h-4" />
           Guardar Configuración
         </button>
       </form>
