@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import chatRouter from "./chat";
 import claudePageRouter from "./claude-page";
 import posRouter from "./pos";
+import uploadRouter from "./upload";
 
 const AI_SERVER_URL = process.env.AI_SERVER_URL ?? "http://127.0.0.1:8765";
 
@@ -15,6 +16,7 @@ const router = Router();
 router.use(claudePageRouter);
 router.use(chatRouter);
 router.use("/admin/pos", posRouter);
+router.use("/admin/upload", uploadRouter);
 
 const JWT_SECRET = process.env["JWT_SECRET"];
 if (!JWT_SECRET) throw new Error("JWT_SECRET env var is required");
