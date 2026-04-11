@@ -13,6 +13,7 @@ import AdminUsers from "@/pages/AdminUsers";
 import AdminMemberships from "@/pages/AdminMemberships";
 import AdminAI from "@/pages/AdminAI";
 import AdminAsistente from "@/pages/AdminAsistente";
+import POS from "@/pages/POS";
 import Profile from "@/pages/Profile";
 import Billing from "@/pages/Billing";
 import ChatAI from "@/pages/ChatAI";
@@ -84,6 +85,7 @@ function Router() {
             {user.isAdmin && <Route path="/admin/membresias" component={AdminMemberships} />}
             {user.isAdmin && <Route path="/admin/ia" component={AdminAI} />}
             {user.isAdmin && <Route path="/admin/asistente" component={AdminAsistente} />}
+            {user.isAdmin && <Route path="/admin/pos" component={POS} />}
             <Route component={NotFound} />
           </Switch>
         )}
