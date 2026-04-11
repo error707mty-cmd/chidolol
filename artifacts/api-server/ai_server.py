@@ -195,22 +195,16 @@ def _waifu2x_upscale(bgr: np.ndarray, scale: int) -> np.ndarray:
     return (hwc[:, :, ::-1] * 255).astype(np.uint8)
 
 
-# ── Local SR models (FSRCNN) — kept as last-resort fallback ──────────────────
+# ── Local SR models (FSRCNN) — Disabled for opencv-headless ──────────────────
+# opencv-headless doesn't include dnn_superres module
+# We'll use Replicate API or other online services instead
 _sr_models: dict = {}
 _models_dir: str = ""
 
 
-def _load_sr(scale: int) -> cv2.dnn_superres.DnnSuperResImpl:
-    if scale not in _sr_models:
-        model_path = os.path.join(_models_dir, f"FSRCNN_x{scale}.pb")
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(f"No SR model for x{scale}: {model_path}")
-        sr = cv2.dnn_superres.DnnSuperResImpl_create()
-        sr.readModel(model_path)
-        sr.setModel("fsrcnn", scale)
-        _sr_models[scale] = sr
-        log.info(f"FSRCNN x{scale} loaded")
-    return _sr_models[scale]
+# def _load_sr(scale: int) -> cv2.dnn_superres.DnnSuperResImpl:
+#     """Disabled - requires opencv-contrib which is not headless"""
+#     raise NotImplementedError("Local SR models disabled. Use Replicate API instead.")
 
 
 from contextlib import asynccontextmanager
@@ -416,12 +410,8 @@ async def lifespan(app: FastAPI):
         try:
             _load_w2x()
         except Exception as e:
-            log.warning(f"waifu2x warmup failed ({e}), will fall back to FSRCNN")
-            for s in (2, 4):
-                try:
-                    _load_sr(s)
-                except Exception as e2:
-                    log.warning(f"FSRCNN x{s} warmup: {e2}")
+            log.warning(f"waifu2x warmup failed ({e}), local SR disabled")
+            # FSRCNN disabled - opencv-headless doesn't support dnn_superres
         # Pre-load rembg so the first remove-bg request is fast
         try:
             _get_rembg_session()
@@ -859,18 +849,11 @@ def _local_enhance(input_bytes: bytes, scale: int) -> bytes:
     try:
         rgb = _waifu2x_upscale(rgb, scale)
     except Exception as e:
-        log.warning(f"waifu2x failed ({e}), falling back to FSRCNN")
-        if scale == 4:
-            sr4 = _load_sr(4)
-            rgb = sr4.upsample(rgb)
-        elif scale == 3:
-            h0, w0 = rgb.shape[:2]
-            sr2 = _load_sr(2)
-            rgb = sr2.upsample(rgb)
-            rgb = cv2.resize(rgb, (w0 * 3, h0 * 3), interpolation=cv2.INTER_LANCZOS4)
-        else:
-            sr2 = _load_sr(2)
-            rgb = sr2.upsample(rgb)
+        log.error(f"waifu2x failed ({e}), and FSRCNN fallback is disabled")
+        # Fallback to simple Lanczos if waifu2x fails
+        h0, w0 = rgb.shape[:2]
+        rgb = cv2.resize(rgb, (w0 * scale, h0 * scale), interpolation=cv2.INTER_LANCZOS4)
+        log.info(f"Using Lanczos {scale}x fallback")
 
     # ── Post-processing for print quality ─────────────────────────────────────
     # 1. Moderate LAB luminance sharpening — two passes, low amounts.

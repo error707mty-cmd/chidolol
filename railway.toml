@@ -1,0 +1,21 @@
+# Railway Configuration for Yuki IDE
+# This enables multiple services: main app + preview server
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "supervisorctl start all && tail -f /var/log/supervisor/*.log"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
+# Health check for the main app
+healthcheckPath = "/api/health"
+healthcheckTimeout = 100
+
+# Environment variables (these will be set in Railway UI)
+[env]
+
+# Volume configuration (configure this in Railway UI)
+# Path: /app/yuki-repos
+# This persists the cloned repositories
