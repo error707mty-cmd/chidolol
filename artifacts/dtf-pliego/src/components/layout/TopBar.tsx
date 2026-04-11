@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LayoutGrid, Download, FolderOpen, Loader2 } from "lucide-react";
+import { LayoutGrid, Download, FolderOpen, Loader2, ShoppingCart } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
@@ -72,14 +72,23 @@ export function Topbar({ pliego }: { pliego: Pliego }) {
       </Link>
 
       {user?.isAdmin && (
-        <Link href="/admin">
-          <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 text-xs text-violet-400/80 hover:text-violet-300 hover:bg-violet-500/10">
-            <svg width="12" height="12" viewBox="0 0 14 14" fill="currentColor">
-              <path d="M7 1L1.5 3.5v4C1.5 10.5 4 12.5 7 13c3-.5 5.5-2.5 5.5-5.5v-4L7 1z"/>
-            </svg>
-            Admin
-          </Button>
-        </Link>
+        <>
+          <Link href="/admin">
+            <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 text-xs text-violet-400/80 hover:text-violet-300 hover:bg-violet-500/10">
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="currentColor">
+                <path d="M7 1L1.5 3.5v4C1.5 10.5 4 12.5 7 13c3-.5 5.5-2.5 5.5-5.5v-4L7 1z"/>
+              </svg>
+              Admin
+            </Button>
+          </Link>
+          
+          <Link href="/admin/pos">
+            <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 text-xs text-green-400/80 hover:text-green-300 hover:bg-green-500/10">
+              <ShoppingCart className="h-3.5 w-3.5" />
+              POS
+            </Button>
+          </Link>
+        </>
       )}
 
       <Link href="/perfil">

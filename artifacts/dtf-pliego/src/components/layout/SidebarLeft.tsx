@@ -18,7 +18,7 @@ import { useHistory } from "@/contexts/HistoryContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { UploadCloud, Loader2, LayoutGrid, Trash2, FolderOpen, RefreshCw, Download, Printer, Type, Eraser, Wand2, Lock, Unlock } from "lucide-react";
+import { UploadCloud, Loader2, LayoutGrid, Trash2, FolderOpen, RefreshCw, Download, Printer, Type, Eraser, Wand2, Lock, Unlock, ShoppingCart } from "lucide-react";
 import { renderTextToBlob, saveTextParams, DEFAULT_PARAMS } from "@/lib/textRender";
 import { textParamsStore } from "@/lib/textParamsStore";
 import { Link } from "wouter";
@@ -361,11 +361,20 @@ export function SidebarLeft({
           style={{ height: 28, width: "auto", objectFit: "contain" }}
           draggable={false}
         />
-        <Link href="/pliegos">
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-white/40 hover:text-violet-300 hover:bg-violet-500/10 rounded-lg">
-            <FolderOpen className="h-3.5 w-3.5" />
-          </Button>
-        </Link>
+        <div className="flex items-center gap-1">
+          {user?.isAdmin && (
+            <Link href="/admin/pos">
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-green-400/80 hover:text-green-300 hover:bg-green-500/10 rounded-lg" title="Punto de Venta">
+                <ShoppingCart className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          )}
+          <Link href="/pliegos">
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-white/40 hover:text-violet-300 hover:bg-violet-500/10 rounded-lg">
+              <FolderOpen className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* ── MEDIDAS ── */}
