@@ -1,13 +1,16 @@
 [phases.setup]
-nixPkgs = ['nodejs_20', 'nodePackages.pnpm']
+nixPkgs = ["nodejs-20_x", "yarn", "python311", "postgresql"]
+
 [phases.install]
-cmds = ['pnpm install --no-frozen-lockfile']
+cmds = [
+  "yarn install --frozen-lockfile"
+]
 
 [phases.build]
 cmds = [
-  'pnpm --filter @workspace/api-server run build',
-  'pnpm --filter @workspace/dtf-pliego run build'
+  "yarn workspace @workspace/dtf-pliego build",
+  "yarn workspace @workspace/api-server build"
 ]
 
 [start]
-cmd = 'node artifacts/api-server/dist/index.js'
+cmd = "bash /app/railway-start.sh"

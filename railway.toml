@@ -1,21 +1,28 @@
-# Railway Configuration for Yuki IDE
-# This enables multiple services: main app + preview server
+# Railway Configuration for ERROR707 DTF Studio
+# Monorepo deployment: Frontend (React) + Backend (Node.js) + AI Server (Python)
 
 [build]
 builder = "nixpacks"
 
 [deploy]
-startCommand = "supervisorctl start all && tail -f /var/log/supervisor/*.log"
+# Start backend using our custom script
+# Frontend is served statically via backend in production
+startCommand = "bash /app/railway-start.sh"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 
-# Health check for the main app
+# Health check for the backend API
 healthcheckPath = "/api/health"
 healthcheckTimeout = 100
 
-# Environment variables (these will be set in Railway UI)
+# Environment variables (configure these in Railway dashboard)
+# Required:
+# - DATABASE_URL (PostgreSQL connection string from Railway)
+# - JWT_SECRET (any secure random string)
+# - DEEPSEEK_API_KEY (optional, for Yuki AI features)
+# - GROQ_API_KEY (optional, for Yuki AI features)
 [env]
 
-# Volume configuration (configure this in Railway UI)
-# Path: /app/yuki-repos
-# This persists the cloned repositories
+# Volume configuration for cloned repos persistence
+# Configure in Railway UI: /app/yuki-repos
+# This prevents losing cloned GitHub repos on restart

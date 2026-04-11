@@ -1,24 +1,19 @@
 {
-  "name": "workspace",
-  "version": "0.0.0",
-  "license": "MIT",
-  "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
-  },
+  "name": "dtf-studio-monorepo",
+  "version": "1.0.0",
   "private": true,
-  "devDependencies": {
-    "prettier": "^3.8.1",
-    "tsx": "catalog:",
-    "typescript": "~5.9.2"
+  "workspaces": [
+    "artifacts/*",
+    "lib/*"
+  ],
+  "scripts": {
+    "build": "yarn workspace @workspace/dtf-pliego build && yarn workspace @workspace/api-server build",
+    "start": "yarn workspace @workspace/api-server start",
+    "dev:frontend": "yarn workspace @workspace/dtf-pliego dev",
+    "dev:backend": "yarn workspace @workspace/api-server dev"
   },
-  "dependencies": {
-    "@rollup/rollup-linux-arm64-gnu": "^4.60.1",
-    "@tailwindcss/oxide-linux-arm64-gnu": "^4.2.2",
-    "lightningcss-linux-arm64-gnu": "^1.32.0",
-    "stripe": "20.0.0",
-    "stripe-replit-sync": "1.0.0"
+  "engines": {
+    "node": ">=20.0.0",
+    "yarn": ">=1.22.0"
   }
 }
