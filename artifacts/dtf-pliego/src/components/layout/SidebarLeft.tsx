@@ -361,20 +361,11 @@ export function SidebarLeft({
           style={{ height: 28, width: "auto", objectFit: "contain" }}
           draggable={false}
         />
-        <div className="flex items-center gap-1">
-          {user?.isAdmin && (
-            <Link href="/admin/pos">
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-green-400/80 hover:text-green-300 hover:bg-green-500/10 rounded-lg" title="Punto de Venta">
-                <ShoppingCart className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
-          )}
-          <Link href="/pliegos">
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-white/40 hover:text-violet-300 hover:bg-violet-500/10 rounded-lg">
-              <FolderOpen className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
-        </div>
+        <Link href="/pliegos">
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-white/40 hover:text-violet-300 hover:bg-violet-500/10 rounded-lg">
+            <FolderOpen className="h-3.5 w-3.5" />
+          </Button>
+        </Link>
       </div>
 
       {/* ── MEDIDAS ── */}
