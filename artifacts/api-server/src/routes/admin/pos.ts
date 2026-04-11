@@ -8,8 +8,12 @@ import {
   posInventoryMovementsTable,
 } from "@workspace/db";
 import { eq, and, gte, lte, sql, desc, or } from "drizzle-orm";
+import { requireAuth } from "../../middlewares/requireAuth";
 
 const router = express.Router();
+
+// Require authentication for all POS routes
+router.use(requireAuth);
 
 // ── Middleware: Solo admins ───────────────────────────────────────────────────
 function requireAdmin(req: any, res: any, next: any) {

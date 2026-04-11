@@ -14,7 +14,7 @@ const AI_SERVER_URL = process.env.AI_SERVER_URL ?? "http://127.0.0.1:8765";
 const router = Router();
 router.use(claudePageRouter);
 router.use(chatRouter);
-router.use("/pos", posRouter);
+router.use("/admin/pos", posRouter);
 
 const JWT_SECRET = process.env["JWT_SECRET"];
 if (!JWT_SECRET) throw new Error("JWT_SECRET env var is required");

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearch, useLocation } from "wouter";
+import { Link } from "wouter";
 import {
   useGetPliego,
   useListPliegoImages,
@@ -20,7 +21,7 @@ import { CanvasArea } from "@/components/canvas/CanvasArea";
 import { TextToolbar } from "@/components/canvas/TextToolbar";
 import { HistoryProvider, useHistory } from "@/contexts/HistoryContext";
 import { useMobile } from "@/hooks/useMobile";
-import { Loader2, Undo2, Redo2 } from "lucide-react";
+import { Loader2, Undo2, Redo2, ShoppingCart } from "lucide-react";
 import { renderTextToBlob, saveTextParams, type TextParams } from "@/lib/textRender";
 import { useThumbnailSave } from "@/hooks/useThumbnail";
 
@@ -34,7 +35,7 @@ export default function Home() {
 
 function HomeInner() {
   const isMobile = useMobile();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [, setLocation] = useLocation();
   const search = useSearch();
   const params = new URLSearchParams(search);
@@ -401,6 +402,23 @@ function HomeInner() {
         >
           <span className="text-violet-200 font-medium">{undoToast}</span>
         </div>
+      )}
+
+      {/* POS Button (Solo para admins) */}
+      {user?.isAdmin && (
+        <Link href="/admin/pos">
+          <button
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-full text-sm font-semibold text-white shadow-2xl transition-all hover:scale-105 active:scale-95"
+            style={{
+              background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
+              boxShadow: "0 8px 32px rgba(34, 197, 94, 0.5), 0 0 40px rgba(34, 197, 94, 0.3)",
+            }}
+          >
+            <ShoppingCart size={20} />
+            <span className="hidden sm:inline">Punto de Venta</span>
+            <span className="sm:hidden">POS</span>
+          </button>
+        </Link>
       )}
     </div>
   );
