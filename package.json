@@ -7,7 +7,7 @@
     "lib/*"
   ],
   "scripts": {
-    "dev": "concurrently \"yarn dev:backend\" \"yarn dev:frontend\"",
+    "dev": "yarn workspace @workspace/dtf-pliego dev",
     "build": "yarn workspace @workspace/dtf-pliego build && yarn workspace @workspace/api-server build",
     "start": "yarn workspace @workspace/api-server start",
     "dev:frontend": "yarn workspace @workspace/dtf-pliego dev",
@@ -17,8 +17,5 @@
   "engines": {
     "node": ">=20.0.0",
     "yarn": ">=1.22.0"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
   }
 }

@@ -2,22 +2,12 @@
 
 ## 🚀 Inicio Rápido en Bolt.diy
 
-### Opción 1: Solo Frontend (Vista Previa Rápida)
-```bash
-yarn dev:frontend
-```
-**Puerto**: 3000  
-**Nota**: El backend no funcionará, pero podrás ver el diseño del POS.
-
-### Opción 2: Full Stack (Frontend + Backend)
+### ✅ Paso 1: Ejecuta en la terminal
 ```bash
 yarn dev
 ```
-**Puertos**:
-- Frontend: 3000
-- Backend: 8001
 
-⚠️ **IMPORTANTE**: Bolt.diy necesita que configures PostgreSQL externamente. Sin base de datos, solo verás el frontend.
+Eso es todo! El frontend arrancará automáticamente en el puerto 3000.
 
 ## 📦 Estructura del Proyecto
 
@@ -65,14 +55,14 @@ El POS está en: `/admin/pos` (requiere login como admin)
 ## 🎯 Scripts Disponibles
 
 ```bash
-# Solo frontend (recomendado para Bolt.diy)
+# Inicia el frontend (recomendado para Bolt.diy)
+yarn dev
+
+# O explícitamente
 yarn dev:frontend
 
-# Solo backend
+# Solo backend (requiere PostgreSQL)
 yarn dev:backend
-
-# Ambos simultáneamente (requiere concurrently)
-yarn dev
 
 # Build para producción
 yarn build

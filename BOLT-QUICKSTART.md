@@ -1,13 +1,13 @@
 # 🎯 GUÍA RÁPIDA PARA VER EL POS EN BOLT.DIY
 
-## ⚡ Inicio Rápido (2 pasos)
+## ⚡ Inicio Rápido (1 comando)
 
-### 1️⃣ En la terminal de Bolt.diy, ejecuta:
+### En la terminal de Bolt.diy, ejecuta:
 ```bash
-yarn dev:frontend
+yarn dev
 ```
 
-### 2️⃣ Para ver el POS sin login:
+**¡Eso es todo!** El POS se abrirá en `http://localhost:3000/admin/pos`
 
 Opción A - Modifica `App.tsx` (líneas 62-67):
 ```tsx

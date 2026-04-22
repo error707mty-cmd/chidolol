@@ -4,22 +4,14 @@
 
 Si solo quieres ver el diseño del POS sin complicaciones:
 
-### Paso 1: Edita `package.json` en la raíz
-Cambia el script `dev`:
-```json
-{
-  "scripts": {
-    "dev": "yarn workspace @workspace/dtf-pliego dev"
-  }
-}
-```
-
-### Paso 2: En Bolt.diy, ejecuta:
+### Paso 1: En Bolt.diy, ejecuta:
 ```bash
 yarn dev
 ```
 
-### Paso 3: Para ver el POS sin login
+**¡Eso es todo!** Ve a `http://localhost:3000/admin/pos`
+
+### Paso 2 (Opcional): Para ver el POS sin login
 Reemplaza el contenido de `artifacts/dtf-pliego/src/App.tsx` con esto:
 
 ```tsx
