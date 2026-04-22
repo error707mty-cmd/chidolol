@@ -1,0 +1,17 @@
+{
+  "name": "DTF Studio + POS",
+  "description": "Sistema de diseño DTF con punto de venta integrado",
+  "main": "artifacts/dtf-pliego/src/main.tsx",
+  "scripts": {
+    "dev": "yarn dev:frontend",
+    "build": "yarn build",
+    "preview": "yarn preview"
+  },
+  "ports": {
+    "frontend": 3000,
+    "backend": 8001
+  },
+  "env": {
+    "VITE_API_URL": "http://localhost:8001"
+  }
+}
