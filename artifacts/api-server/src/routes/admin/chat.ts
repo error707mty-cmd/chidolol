@@ -361,6 +361,36 @@ async function toolExecNodeScript(scriptPath: string, args?: string[]): Promise<
   }
 }
 
+// ── GitHub API ────────────────────────────────────────────────────────────────
+
+async function toolGithubApi(endpoint: string, method: string, body?: Record<string, unknown>): Promise<unknown> {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) return { error: "GITHUB_TOKEN no está configurado en las variables de entorno" };
+
+  const url = `https://api.github.com${endpoint}`;
+  try {
+    const fetchOptions: RequestInit = {
+      method: method.toUpperCase(),
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
+        "User-Agent": "ERROR707-AI-Agent",
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    };
+    const response = await fetch(url, fetchOptions);
+    const data = await response.json();
+    if (!response.ok) {
+      return { error: `GitHub API error ${response.status}`, details: data };
+    }
+    return data;
+  } catch (e: any) {
+    return { error: `Error al conectar con GitHub API: ${e.message}` };
+  }
+}
+
 // ── Conocimiento propio (auto-aprendizaje) ─────────────────────────────────────
 
 async function toolReadKnowledge(): Promise<unknown> {
@@ -677,7 +707,23 @@ Ejemplos útiles:
       required: ["scriptPath"],
     },
   },
+  // ── GitHub API ──
+
+  {
+    name: "github_api",
+    description: "Make requests to GitHub API using the GITHUB_TOKEN for accessing private repositories",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        endpoint: { type: "string", description: "GitHub API endpoint (ej: \"/repos/owner/repo/contents/path\")" },
+        method: { type: "string", description: "HTTP method (GET, POST, PUT, DELETE, etc.)" },
+        body: { type: "object", description: "Request body for POST/PUT requests (opcional)", additionalProperties: true },
+      },
+      required: ["endpoint", "method"],
+    },
+  },
 ];
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SYSTEM PROMPT
@@ -797,6 +843,8 @@ SQL directo:    execute_sql (usa $1,$2... para parámetros)
 Código:         list_files, read_file, write_file, search_in_files, grep_file
 Sistema:        exec_shell, install_package, restart_backend
 Aprendizaje:    read_knowledge, update_knowledge, append_knowledge
+Ejecución:      eval_code, exec_node_script
+GitHub:         github_api (usa GITHUB_TOKEN para repos privados)
 
 IMPORTANTE SOBRE CONFIGURACIÓN DE IA:
 Tienes CONTROL TOTAL sobre el servidor de IA (puerto 8765). Puedes:
@@ -945,6 +993,7 @@ router.post("/admin/chat", requireAdmin, async (req, res) => {
             case "append_knowledge":     result = await toolAppendKnowledge(inp.note); break;
             case "eval_code":            result = await toolEvalCode(inp.code); break;
             case "exec_node_script":     result = await toolExecNodeScript(inp.scriptPath, inp.args); break;
+            case "github_api":           result = await toolGithubApi(inp.endpoint, inp.method, inp.body); break;
             default:                     result = { error: `Herramienta desconocida: ${tool.name}` };
           }
         } catch (e) {
@@ -965,7 +1014,9 @@ router.post("/admin/chat", requireAdmin, async (req, res) => {
     }
 
 
+
     // Guardar la conversación en memoria semántica (async, no bloquea respuesta)
+
     try {
       const userMsgs = messages.filter(m => m.role === "user").map(m => {
         if (typeof m.content === "string") return m.content;
@@ -1204,7 +1255,9 @@ async function runJobInBackground(job: Job, brain: string, semanticContext: stri
             case "append_knowledge":     result = await toolAppendKnowledge(inp.note); break;
             case "eval_code":            result = await toolEvalCode(inp.code); break;
             case "exec_node_script":     result = await toolExecNodeScript(inp.scriptPath, inp.args); break;
+            case "github_api":           result = await toolGithubApi(inp.endpoint, inp.method, inp.body); break;
             default:                     result = { error: `Herramienta desconocida: ${tool.name}` };
+
           }
         } catch (e) {
           result = { error: String(e) };
